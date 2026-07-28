@@ -1,0 +1,6 @@
+{
+  "name": "Barbearia Bragança",
+  "description": "Sistema de gestão completo e responsivo para a Barbearia Bragança, com controle de faturamento, profissionais, serviços, produtos, despesas e relatórios.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
