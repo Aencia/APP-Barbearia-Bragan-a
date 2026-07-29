@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Barbearia Bragança - Sistema de Gestão</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        gold: { DEFAULT: '#D4AF37', hover: '#E5C158', dark: '#AA8822' },
+                        navy: { 900: '#0B0E14', 800: '#161B22', 700: '#21262D', 600: '#30363D' }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { background-color: #0B0E14; color: #F0F6FC; font-family: system-ui, -apple-system, sans-serif; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #161B22; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #30363D; border-radius: 4px; }
+    </style>
+</head>
+<body class="flex flex-col md:flex-row min-h-screen custom-scrollbar">
+
+    <!-- SIDEBAR DE NAVEGAÇÃO -->
+    <aside class="w-full md:w-64 bg-navy-800 border-r border-navy-600 flex-shrink-0 flex flex-col justify-between">
+        <div>
+            <!-- Header / Logo -->
+            <div class="p-5 border-b border-navy-600 flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-full bg-gold/20 border border-gold flex items-center justify-center text-gold font-bold text-xl">
+                        <i class="fa-solid font-scissors"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-white tracking-wide leading-tight">Barbearia Bragança</h1>
+                        <span class="text-xs text-gold font-medium">Gestão Integrada</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Menus -->
+            <nav class="p-3 space-y-1">
+                <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium transition text-white bg-navy-700 border-l-4 border-gold">
+                    <i class="fa-solid fa-chart-line w-5 text-gold"></i>
+                    <span>Dashboard</span>
+                </button>
+                <button onclick="switchTab('atendimentos')" id="nav-atendimentos" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-navy-700 transition">
+                    <i class="fa-solid fa-calendar-check w-5 text-blue-400"></i>
+                    <span>Atendimentos</span>
+                </button>
+                <button onclick="switchTab('clientes')" id="nav-clientes" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-navy-700 transition">
+                    <i class="fa-solid fa-users w-5 text-emerald-400"></i>
+                    <span>Clientes & Clube</span>
+                </button>
+                <button onclick="switchTab('profissionais')" id="nav-profissionais" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-navy-700 transition">
+                    <i class="fa-solid fa-user-ninja w-5 text-purple-400"></i>
+                    <span>Profissionais</span>
+                </button>
+                <button onclick="switchTab('servicos')" id="nav-servicos" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-navy-700 transition">
+                    <i class="fa-solid fa-cut w-5 text-amber-400"></i>
+                    <span>Serviços & Produtos</span>
+                </button>
+                <button onclick="switchTab('financeiro')" id="nav-financeiro" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-navy-700 transition">
+                    <i class="fa-solid fa-wallet w-5 text-rose-400"></i>
+                    <span>Financeiro</span>
+                </button>
+                <button onclick="switchTab('configuracoes')" id="nav-configuracoes" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-navy-700 transition">
+                    <i class="fa-solid fa-gear w-5 text-gray-400"></i>
+                    <span>Configurações & API</span>
+                </button>
+            </nav>
+        </div>
+
+        <!-- Connection Status -->
+        <div class="p-4 border-t border-navy-600 bg-navy-900/50">
+            <div class="flex items-center justify-between text-xs">
+                <span class="text-gray-400">Banco de Dados:</span>
+                <span id="db-status-badge" class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                    <i class="fa-solid fa-database mr-1"></i> LocalStorage
+                </span>
+            </div>
+        </div>
+    </aside>
+
+    <!-- CONTEÚDO PRINCIPAL -->
+    <main class="flex-1 p-4 md:p-8 overflow-y-auto custom-scrollbar">
+
+        <!-- TAB 1: DASHBOARD -->
+        <section id="tab-dashboard" class="space-y-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-white">Painel de Controle</h2>
+                    <p class="text-sm text-gray-400">Visão geral do desempenho e métricas da Barbearia Bragança</p>
+                </div>
+                <button onclick="openNovoAtendimentoModal()" class="bg-gold hover:bg-gold-hover text-navy-900 font-bold px-4 py-2.5 rounded-lg text-sm flex items-center space-x-2 transition shadow-lg">
+                    <i class="fa-solid fa-plus"></i>
+                    <span>Novo Atendimento</span>
+                </button>
+            </div>
+
+            <!-- CARDS DE METRICAS (KPIs) -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div class="bg-navy-800 border border-navy-600 rounded-xl p-4 flex flex-col justify-between">
+                    <div class="flex items-center justify-between text-gray-400 mb-2">
+                        <span class="text-xs font-semibold uppercase">Atendimentos</span>
+                        <i class="fa-solid fa-scissors text-gold"></i>
+                    </div>
+                    <span id="kpi-atendimentos" class="text-2xl font-bold text-white">151</span>
+                    <span class="text-[11px] text-emerald-400 mt-1"><i class="fa-solid fa-arrow-up mr-1"></i>Finalizados no mês</span>
+                </div>
+
+                <div class="bg-navy-800 border border-navy-600 rounded-xl p-4 flex flex-col justify-between">
+                    <div class="flex items-center justify-between text-gray-400 mb-2">
+                        <span class="text-xs font-semibold uppercase">Faturamento</span>
+                        <i class="fa-solid fa-brazilian-real-sign text-emerald-400"></i>
+                    </div>
+                    <span id="kpi-faturamento" class="text-2xl font-bold text-emerald-400">R$ 10.750,16</span>
+                    <span class="text-[11px] text-gray-400 mt-1">Bruto total</span>
+                </div>
+
+                <div class="bg-navy-800 border border-navy-600 rounded-xl p-4 flex flex-col justify-between">
+                    <div class="flex items-center justify-between text-gray-400 mb-2">
+                        <span class="text-xs font-semibold uppercase">Ticket Médio</span>
+                        <i class="fa-solid fa-receipt text-blue-400"></i>
+                    </div>
+                    <span id="kpi-ticket" class="text-2xl font-bold text-white">R$ 71,19</span>
+                    <span class="text-[11px] text-gray-400 mt-1">Por cliente</span>
+                </div>
+
+                <div class="bg-navy-800 border border-navy-600 rounded-xl p-4 flex flex-col justify-between">
+                    <div class="flex items-center justify-between text-gray-400 mb-2">
+                        <span class="text-xs font-semibold uppercase">Taxa de Retorno</span>
+                        <i class="fa-solid fa-rotate-right text-purple-400"></i>
+                    </div>
+                    <span id="kpi-retorno" class="text-2xl font-bold text-purple-300">84%</span>
+                    <span class="text-[11px] text-purple-400 mt-1">Clientes recorrentes</span>
+                </div>
+
+                <div class="bg-navy-800 border border-navy-600 rounded-xl p-4 flex flex-col justify-between">
+                    <div class="flex items-center justify-between text-gray-400 mb-2">
+                        <span class="text-xs font-semibold uppercase">Previsão Mensal</span>
+                        <i class="fa-solid fa-chart-line text-amber-400"></i>
+                    </div>
+                    <span id="kpi-previsao" class="text-2xl font-bold text-amber-300">R$ 18.250,00</span>
+                    <span class="text-[11px] text-gray-400 mt-1">Estimada no mês</span>
+                </div>
+            </div>
+
+            <!-- GRÁFICOS -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="bg-navy-800 border border-navy-600 rounded-xl p-5">
+                    <h3 class="font-bold text-white text-base mb-1">Evolução do Faturamento (Semanal)</h3>
+                    <p class="text-xs text-gray-400 mb-4">Faturamento distribuído ao longo das semanas</p>
+                    <div class="h-64"><canvas id="chartEvolucao"></canvas></div>
+                </div>
+
+                <div class="bg-navy-800 border border-navy-600 rounded-xl p-5">
+                    <h3 class="font-bold text-white text-base mb-1">Despesas por Categoria</h3>
+                    <p class="text-xs text-gray-400 mb-4">Distribuição de custos fixos e operacionais</p>
+                    <div class="h-64 flex justify-center"><canvas id="chartDespesas"></canvas></div>
+                </div>
+
+                <div class="bg-navy-800 border border-navy-600 rounded-xl p-5">
+                    <h3 class="font-bold text-white text-base mb-1">Faturamento por Profissional</h3>
+                    <p class="text-xs text-gray-400 mb-4">Total gerado em serviços e comissões</p>
+                    <div class="h-64"><canvas id="chartProfissionais"></canvas></div>
+                </div>
+
+                <div class="bg-navy-800 border border-navy-600 rounded-xl p-5">
+                    <h3 class="font-bold text-white text-base mb-1">Vendas de Produtos por Categoria</h3>
+                    <p class="text-xs text-gray-400 mb-4">Bebidas, Cabelo/Barba e Perfumes</p>
+                    <div class="h-64"><canvas id="chartProdutos"></canvas></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 2: ATENDIMENTOS -->
+        <section id="tab-atendimentos" class="hidden space-y-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-2xl font-bold text-white">Histórico de Atendimentos</h2>
+                    <p class="text-sm text-gray-400">Lançamento de cortes, serviços e venda de produtos</p>
+                </div>
+                <button onclick="openNovoAtendimentoModal()" class="bg-gold hover:bg-gold-hover text-navy-900 font-bold px-4 py-2.5 rounded-lg text-sm flex items-center space-x-2 transition">
+                    <i class="fa-solid fa-plus"></i>
+                    <span>Lançar Atendimento</span>
+                </button>
+            </div>
+
+            <div class="bg-navy-800 border border-navy-600 rounded-xl overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm text-gray-300">
+                        <thead class="bg-navy-700 text-xs uppercase text-gray-400">
+                            <tr>
+                                <th class="p-4">Data / Hora</th>
+                                <th class="p-4">Cliente</th>
+                                <th class="p-4">Profissional</th>
+                                <th class="p-4">Pagamento</th>
+                                <th class="p-4 text-right">Comissão</th>
+                                <th class="p-4 text-right">Valor Total</th>
+                                <th class="p-4 text-center">Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody id="lista-atendimentos" class="divide-y divide-navy-600">
+                            <!-- Injetado dinamicamente -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 3: CLIENTES -->
+        <section id="tab-clientes" class="hidden space-y-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-white">Base de Clientes & Clube</h2>
+                    <p class="text-sm text-gray-400">Gestão de contatos e planos de fidelidade</p>
+                </div>
+                <div class="flex space-x-2">
+                    <input type="text" id="busca-cliente" onkeyup="filtrarClientes()" placeholder="Buscar cliente..." class="bg-navy-700 border border-navy-600 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-gold">
+                    <button onclick="openNovoClienteModal()" class="bg-gold hover:bg-gold-hover text-navy-900 font-bold px-4 py-2.5 rounded-lg text-sm flex items-center space-x-2 transition">
+                        <i class="fa-solid fa-user-plus"></i>
+                        <span>Novo Cliente</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="bg-navy-800 border border-navy-600 rounded-xl overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm text-gray-300">
+                        <thead class="bg-navy-700 text-xs uppercase text-gray-400">
+                            <tr>
+                                <th class="p-4">Nome do Cliente</th>
+                                <th class="p-4">Telefone</th>
+                                <th class="p-4 text-center">Visitas Total</th>
+                                <th class="p-4">Plano Clube</th>
+                                <th class="p-4 text-right">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="lista-clientes" class="divide-y divide-navy-600">
+                            <!-- Injetado dinamicamente -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 4: PROFISSIONAIS -->
+        <section id="tab-profissionais" class="hidden space-y-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-2xl font-bold text-white">Equipe de Profissionais</h2>
+                    <p class="text-sm text-gray-400">Barbeiros, comissões e metas de produtos</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="lista-profissionais">
+                <!-- Cards injetados via JS -->
+            </div>
+        </section>
+
+        <!-- TAB 5: SERVIÇOS & PRODUTOS -->
+        <section id="tab-servicos" class="hidden space-y-6">
+            <div>
+                <h2 class="text-2xl font-bold text-white">Catálogo de Serviços & Produtos</h2>
+                <p class="text-sm text-gray-400">Preços, durações e taxas de comissão</p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Tabela Serviços -->
+                <div class="bg-navy-800 border border-navy-600 rounded-xl p-5">
+                    <h3 class="text-lg font-bold text-white mb-4 flex items-center space-x-2">
+                        <i class="fa-solid fa-scissors text-amber-400"></i>
+                        <span>Serviços Disponíveis</span>
+                    </h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm text-gray-300">
+                            <thead class="bg-navy-700 text-xs uppercase text-gray-400">
+                                <tr>
+                                    <th class="p-3">Serviço</th>
+                                    <th class="p-3 text-center">Duração</th>
+                                    <th class="p-3 text-right">Preço</th>
+                                    <th class="p-3 text-right">Comissão</th>
+                                </tr>
+                            </thead>
+                            <tbody id="lista-servicos-tabela" class="divide-y divide-navy-600"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Tabela Produtos -->
+                <div class="bg-navy-800 border border-navy-600 rounded-xl p-5">
+                    <h3 class="text-lg font-bold text-white mb-4 flex items-center space-x-2">
+                        <i class="fa-solid fa-wine-bottle text-emerald-400"></i>
+                        <span>Produtos & Estoque</span>
+                    </h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm text-gray-300">
+                            <thead class="bg-navy-700 text-xs uppercase text-gray-400">
+                                <tr>
+                                    <th class="p-3">Produto</th>
+                                    <th class="p-3 text-center">Estoque</th>
+                                    <th class="p-3 text-right">Custo</th>
+                                    <th class="p-3 text-right">Venda</th>
+                                </tr>
+                            </thead>
+                            <tbody id="lista-produtos-tabela" class="divide-y divide-navy-600"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 6: FINANCEIRO -->
+        <section id="tab-financeiro" class="hidden space-y-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-2xl font-bold text-white">Gestão Financeira & Despesas</h2>
+                    <p class="text-sm text-gray-400">Lançamentos de despesas operacionais e custos fixos</p>
+                </div>
+                <button onclick="openNovaDespesaModal()" class="bg-rose-600 hover:bg-rose-700 text-white font-bold px-4 py-2.5 rounded-lg text-sm flex items-center space-x-2 transition">
+                    <i class="fa-solid fa-plus"></i>
+                    <span>Nova Despesa</span>
+                </button>
+            </div>
+
+            <div class="bg-navy-800 border border-navy-600 rounded-xl overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm text-gray-300">
+                        <thead class="bg-navy-700 text-xs uppercase text-gray-400">
+                            <tr>
+                                <th class="p-4">Categoria</th>
+                                <th class="p-4">Descrição</th>
+                                <th class="p-4 text-center">Tipo</th>
+                                <th class="p-4 text-right">Valor</th>
+                            </tr>
+                        </thead>
+                        <tbody id="lista-despesas" class="divide-y divide-navy-600"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 7: CONFIGURAÇÕES & SUPABASE -->
+        <section id="tab-configuracoes" class="hidden space-y-6">
+            <div>
+                <h2 class="text-2xl font-bold text-white">Configurações & Conexão Supabase</h2>
+                <p class="text-sm text-gray-400">Ajustes de credenciais e sincronização com banco de dados</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Supabase Config Form -->
+                <div class="bg-navy-800 border border-navy-600 rounded-xl p-6 space-y-4">
+                    <h3 class="font-bold text-white text-lg flex items-center space-x-2">
+                        <i class="fa-solid fa-database text-emerald-400"></i>
+                        <span>Parâmetros da API Supabase</span>
+                    </h3>
+                    <p class="text-xs text-gray-400">Insira suas chaves do Supabase para sincronização em nuvem em tempo real.</p>
+                    
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-gray-400 mb-1">SUPABASE URL</label>
+                        <input type="text" id="supabase-url-input" placeholder="https://xyz.supabase.co" class="w-full bg-navy-700 border border-navy-600 rounded-lg p-3 text-sm text-white focus:outline-none focus:border-gold">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-gray-400 mb-1">SUPABASE ANON KEY</label>
+                        <input type="password" id="supabase-key-input" placeholder="eyJhbGciOi..." class="w-full bg-navy-700 border border-navy-600 rounded-lg p-3 text-sm text-white focus:outline-none focus:border-gold">
+                    </div>
+
+                    <button onclick="salvarConfigSupabase()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-lg text-sm transition flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-floppy-disk"></i>
+                        <span>Conectar & Salvar Credenciais</span>
+                    </button>
+                </div>
+
+                <!-- Credenciais da Barbearia -->
+                <div class="bg-navy-800 border border-navy-600 rounded-xl p-6 space-y-4">
+                    <h3 class="font-bold text-white text-lg flex items-center space-x-2">
+                        <i class="fa-solid fa-lock text-gold"></i>
+                        <span>Conta do Proprietário</span>
+                    </h3>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-gray-400 mb-1">E-mail Cadastrado</label>
+                        <input type="text" value="proprietario@braganca.com" readonly class="w-full bg-navy-900 border border-navy-600 rounded-lg p-3 text-sm text-gray-400">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-gray-400 mb-1">Pergunta de Segurança</label>
+                        <input type="text" value="Braganca" readonly class="w-full bg-navy-900 border border-navy-600 rounded-lg p-3 text-sm text-gray-400">
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- MODAL NOVO ATENDIMENTO -->
+    <div id="modal-atendimento" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+        <div class="bg-navy-800 border border-navy-600 w-full max-w-lg rounded-xl p-6 space-y-4">
+            <div class="flex justify-between items-center border-b border-navy-600 pb-3">
+                <h3 class="font-bold text-white text-lg">Novo Atendimento</h3>
+                <button onclick="closeModal('modal-atendimento')" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+
+            <form id="form-atendimento" onsubmit="salvarAtendimento(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs uppercase font-semibold text-gray-400 mb-1">Cliente</label>
+                    <select id="atend-cliente" required class="w-full bg-navy-700 border border-navy-600 rounded-lg p-3 text-sm text-white"></select>
+                </div>
+
+                <div>
+                    <label class="block text-xs uppercase font-semibold text-gray-400 mb-1">Barbeiro / Profissional</label>
+                    <select id="atend-prof" required class="w-full bg-navy-700 border border-navy-600 rounded-lg p-3 text-sm text-white"></select>
+                </div>
+
+                <div>
+                    <label class="block text-xs uppercase font-semibold text-gray-400 mb-1">Serviço Principal</label>
+                    <select id="atend-servico" required class="w-full bg-navy-700 border border-navy-600 rounded-lg p-3 text-sm text-white"></select>
+                </div>
+
+                <div>
+                    <label class="block text-xs uppercase font-semibold text-gray-400 mb-1">Forma de Pagamento</label>
+                    <select id="atend-pagamento" required class="w-full bg-navy-700 border border-navy-600 rounded-lg p-3 text-sm text-white">
+                        <option value="PIX">PIX</option>
+                        <option value="Dinheiro">Dinheiro</option>
+                        <option value="Cartão de Débito">Cartão de Débito</option>
+                        <option value="Cartão de Crédito">Cartão de Crédito</option>
+                    </select>
+                </div>
+
+                <div class="pt-2 flex justify-end space-x-3">
+                    <button type="button" onclick="closeModal('modal-atendimento')" class="px-4 py-2 bg-navy-700 text-gray-300 rounded-lg text-sm hover:bg-navy-600">Cancelar</button>
+                    <button type="submit" class="px-5 py-2 bg-gold text-navy-900 font-bold rounded-lg text-sm hover:bg-gold-hover">Finalizar Atendimento</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- SCRIPT DA APLICAÇÃO -->
+    <script>
+        // --- 1. DADOS INICIAIS DA BARBEARIA BRAGANÇA ---
+        const initialData = {
+            servicos: [
+                { id: 1, name: "Corte", price: 40.0, durationMinutes: 30, commissionPercentage: 45.0 },
+                { id: 2, name: "Barba", price: 40.0, durationMinutes: 25, commissionPercentage: 45.0 },
+                { id: 3, name: "Sobrancelha", price: 10.0, durationMinutes: 5, commissionPercentage: 45.0 },
+                { id: 4, name: "Pezinho", price: 20.0, durationMinutes: 10, commissionPercentage: 45.0 },
+                { id: 5, name: "Free Style", price: 5.0, durationMinutes: 5, commissionPercentage: 45.0 },
+                { id: 6, name: "Pigmentação", price: 30.0, durationMinutes: 20, commissionPercentage: 45.0 },
+                { id: 7, name: "Camuflagem", price: 40.0, durationMinutes: 20, commissionPercentage: 45.0 },
+                { id: 8, name: "Nevou", price: 100.0, durationMinutes: 90, commissionPercentage: 45.0 }
+            ],
+            produtos: [
+                { id: 1, name: "Cerveja Heineken", category: "Bebidas", stock: 60, cost: 6.0, price: 12.0 },
+                { id: 2, name: "Refrigerante Lata", category: "Bebidas", stock: 45, cost: 2.5, price: 6.0 },
+                { id: 3, name: "Pomada Modeladora Matte", category: "Cabelo e barba", stock: 22, cost: 15.0, price: 35.0 },
+                { id: 4, name: "Óleo Hidratante Barba", category: "Cabelo e barba", stock: 18, cost: 12.0, price: 30.0 },
+                { id: 5, name: "Colônia Bragança", category: "Perfumes", stock: 8, cost: 35.0, price: 85.0 }
+            ],
+            profissionais: [
+                { id: 1, name: "Gabriel Borges Grave Bragança", role: "Fundador", serviceCommissionPercentage: 45.0, productSalesGoal: 500.0 },
+                { id: 2, name: "Luccas", role: "Barbeiro", serviceCommissionPercentage: 45.0, productSalesGoal: 500.0 }
+            ],
+            clientes: [
+                { id: 1, name: "Carlos Silva", phone: "(51) 98123-4567", totalServices: 6, clubPlan: true },
+                { id: 2, name: "Pedro Bragança", phone: "(51) 99876-5432", totalServices: 12, clubPlan: true },
+                { id: 3, name: "Andrei Souza", phone: "(51) 99111-2233", totalServices: 3, clubPlan: false },
+                { id: 4, name: "Lucas Rezende", phone: "(51) 98844-5566", totalServices: 5, clubPlan: false }
+            ],
+            atendimentos: [
+                { id: 101, clientName: "Carlos Silva", professionalName: "Gabriel Borges Grave Bragança", totalValue: 80.0, commissionValue: 36.0, paymentMethod: "PIX", date: "2026-07-28 14:30" },
+                { id: 102, clientName: "Pedro Bragança", professionalName: "Luccas", totalValue: 40.0, commissionValue: 18.0, paymentMethod: "Dinheiro", date: "2026-07-28 15:15" },
+                { id: 103, clientName: "Andrei Souza", professionalName: "Gabriel Borges Grave Bragança", totalValue: 120.0, commissionValue: 54.0, paymentMethod: "Cartão de Crédito", date: "2026-07-28 16:00" }
+            ],
+            despesas: [
+                { id: 1, category: "Aluguel", description: "Ponto Comercial", value: 1311.0, isFixed: true },
+                { id: 2, category: "Energia", description: "Neoenergia Luz", value: 800.0, isFixed: true },
+                { id: 3, category: "Marketing", description: "Tráfego Pago & Meta ADS", value: 350.0, isFixed: true },
+                { id: 4, category: "Software", description: "BarberCode Sistema", value: 120.0, isFixed: true }
+            ]
+        };
+
+        // Local Storage / Cache
+        let store = JSON.parse(localStorage.getItem('braganca_store')) || initialData;
+        function saveStore() { localStorage.setItem('braganca_store', JSON.stringify(store)); }
+
+        // Supabase Client Setup
+        let supabaseClient = null;
+        function initSupabase() {
+            const url = window.ENV_SUPABASE_URL || localStorage.getItem('SUPABASE_URL') || '';
+            const key = window.ENV_SUPABASE_KEY || localStorage.getItem('SUPABASE_KEY') || '';
+
+            if (url && key && window.supabase) {
+                try {
+                    supabaseClient = window.supabase.createClient(url, key);
+                    document.getElementById('db-status-badge').className = "px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30";
+                    document.getElementById('db-status-badge').innerHTML = '<i class="fa-solid fa-cloud mr-1"></i> Supabase Conectado';
+                    document.getElementById('supabase-url-input').value = url;
+                    document.getElementById('supabase-key-input').value = key;
+                } catch (e) {
+                    console.error("Erro ao inicializar Supabase:", e);
+                }
+            }
+        }
+
+        // --- 2. NAVEGAÇÃO ENTRE ABAS ---
+        function switchTab(tabId) {
+            document.querySelectorAll('section[id^="tab-"]').forEach(sec => sec.classList.add('hidden'));
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.className = "nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-navy-700 transition";
+            });
+
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+            const activeNav = document.getElementById(`nav-${tabId}`);
+            if (activeNav) {
+                activeNav.className = "nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-white bg-navy-700 border-l-4 border-gold transition";
+            }
+
+            if (tabId === 'dashboard') renderCharts();
+        }
+
+        // --- 3. RENDERIZAÇÃO DE TABELAS E COMPONENTES ---
+        function renderAll() {
+            // Atendimentos
+            const listaAtend = document.getElementById('lista-atendimentos');
+            listaAtend.innerHTML = store.atendimentos.map(a => `
+                <tr class="hover:bg-navy-700/50">
+                    <td class="p-4 text-xs font-mono text-gray-400">${a.date}</td>
+                    <td class="p-4 font-semibold text-white">${a.clientName}</td>
+                    <td class="p-4 text-gray-300">${a.professionalName}</td>
+                    <td class="p-4"><span class="px-2 py-1 rounded text-xs bg-navy-900 border border-navy-600">${a.paymentMethod}</span></td>
+                    <td class="p-4 text-right text-purple-400">R$ ${a.commissionValue.toFixed(2)}</td>
+                    <td class="p-4 text-right font-bold text-emerald-400">R$ ${a.totalValue.toFixed(2)}</td>
+                    <td class="p-4 text-center">
+                        <button onclick="deletarAtendimento(${a.id})" class="text-rose-400 hover:text-rose-300"><i class="fa-solid fa-trash-can"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+
+            // Clientes
+            const listaClientes = document.getElementById('lista-clientes');
+            listaClientes.innerHTML = store.clientes.map(c => `
+                <tr class="hover:bg-navy-700/50">
+                    <td class="p-4 font-semibold text-white">${c.name}</td>
+                    <td class="p-4 text-gray-400">${c.phone}</td>
+                    <td class="p-4 text-center font-mono">${c.totalServices}</td>
+                    <td class="p-4">${c.clubPlan ? '<span class="px-2 py-0.5 rounded-full text-xs bg-gold/20 text-gold border border-gold/30"><i class="fa-solid fa-star mr-1"></i>Membro Clube</span>' : '<span class="text-xs text-gray-500">Padrão</span>'}</td>
+                    <td class="p-4 text-right">
+                        <button onclick="deletarCliente(${c.id})" class="text-rose-400 hover:text-rose-300"><i class="fa-solid fa-user-minus"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+
+            // Profissionais
+            const listaProfs = document.getElementById('lista-profissionais');
+            listaProfs.innerHTML = store.profissionais.map(p => `
+                <div class="bg-navy-800 border border-navy-600 rounded-xl p-5 space-y-3">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <h4 class="font-bold text-white text-base">${p.name}</h4>
+                            <span class="text-xs text-gold">${p.role}</span>
+                        </div>
+                        <div class="w-10 h-10 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center font-bold">
+                            <i class="fa-solid fa-user-ninja"></i>
+                        </div>
+                    </div>
+                    <div class="pt-3 border-t border-navy-600 text-xs space-y-1 text-gray-300">
+                        <div class="flex justify-between"><span>Comissão Serviços:</span><strong class="text-white">${p.serviceCommissionPercentage}%</strong></div>
+                        <div class="flex justify-between"><span>Meta Venda Produtos:</span><strong class="text-emerald-400">R$ ${p.productSalesGoal.toFixed(2)}</strong></div>
+                    </div>
+                </div>
+            `).join('');
+
+            // Serviços
+            document.getElementById('lista-servicos-tabela').innerHTML = store.servicos.map(s => `
+                <tr>
+                    <td class="p-3 font-medium text-white">${s.name}</td>
+                    <td class="p-3 text-center text-gray-400">${s.durationMinutes} min</td>
+                    <td class="p-3 text-right font-bold text-emerald-400">R$ ${s.price.toFixed(2)}</td>
+                    <td class="p-3 text-right text-purple-400">${s.commissionPercentage}%</td>
+                </tr>
+            `).join('');
+
+            // Produtos
+            document.getElementById('lista-produtos-tabela').innerHTML = store.produtos.map(p => `
+                <tr>
+                    <td class="p-3 font-medium text-white">${p.name} <span class="text-[10px] text-gray-400">(${p.category})</span></td>
+                    <td class="p-3 text-center font-bold ${p.stock < 10 ? 'text-rose-400' : 'text-gray-200'}">${p.stock} un</td>
+                    <td class="p-3 text-right text-gray-400">R$ ${p.cost.toFixed(2)}</td>
+                    <td class="p-3 text-right font-bold text-emerald-400">R$ ${p.price.toFixed(2)}</td>
+                </tr>
+            `).join('');
+
+            // Despesas
+            document.getElementById('lista-despesas').innerHTML = store.despesas.map(d => `
+                <tr>
+                    <td class="p-4 font-semibold text-white">${d.category}</td>
+                    <td class="p-4 text-gray-300">${d.description}</td>
+                    <td class="p-4 text-center">${d.isFixed ? '<span class="text-xs px-2 py-1 rounded bg-blue-500/20 text-blue-300">Fixo</span>' : '<span class="text-xs px-2 py-1 rounded bg-amber-500/20 text-amber-300">Variável</span>'}</td>
+                    <td class="p-4 text-right font-bold text-rose-400">R$ ${d.value.toFixed(2)}</td>
+                </tr>
+            `).join('');
+        }
+
+        // --- 4. POPULARS SELECTS E MODAIS ---
+        function openNovoAtendimentoModal() {
+            const selectCliente = document.getElementById('atend-cliente');
+            selectCliente.innerHTML = store.clientes.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+
+            const selectProf = document.getElementById('atend-prof');
+            selectProf.innerHTML = store.profissionais.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
+
+            const selectServico = document.getElementById('atend-servico');
+            selectServico.innerHTML = store.servicos.map(s => `<option value="${s.id}">${s.name} - R$ ${s.price.toFixed(2)}</option>`).join('');
+
+            document.getElementById('modal-atendimento').classList.remove('hidden');
+            document.getElementById('modal-atendimento').classList.add('flex');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+            document.getElementById(modalId).classList.remove('flex');
+        }
+
+        function salvarAtendimento(event) {
+            event.preventDefault();
+            const cliente = document.getElementById('atend-cliente').value;
+            const prof = document.getElementById('atend-prof').value;
+            const servicoId = parseInt(document.getElementById('atend-servico').value);
+            const pagto = document.getElementById('atend-pagamento').value;
+
+            const servicoObj = store.servicos.find(s => s.id === servicoId);
+            const total = servicoObj ? servicoObj.price : 40.0;
+            const comissao = total * 0.45;
+
+            const novo = {
+                id: Date.now(),
+                clientName: cliente,
+                professionalName: prof,
+                totalValue: total,
+                commissionValue: comissao,
+                paymentMethod: pagto,
+                date: new Date().toISOString().replace('T', ' ').substring(0, 16)
+            };
+
+            store.atendimentos.unshift(novo);
+            saveStore();
+            renderAll();
+            closeModal('modal-atendimento');
+        }
+
+        function deletarAtendimento(id) {
+            store.atendimentos = store.atendimentos.filter(a => a.id !== id);
+            saveStore();
+            renderAll();
+        }
+
+        function salvarConfigSupabase() {
+            const url = document.getElementById('supabase-url-input').value.trim();
+            const key = document.getElementById('supabase-key-input').value.trim();
+
+            if (url && key) {
+                localStorage.setItem('SUPABASE_URL', url);
+                localStorage.setItem('SUPABASE_KEY', key);
+                initSupabase();
+                alert('Credenciais do Supabase salvas com sucesso!');
+            }
+        }
+
+        // --- 5. GRÁFICOS DO DASHBOARD (CHART.JS) ---
+        let chartEvol, chartDesp, chartProf, chartProd;
+
+        function renderCharts() {
+            const chartConfig = {
+                plugins: { legend: { labels: { color: '#8B949E' } } },
+                scales: {
+                    x: { ticks: { color: '#8B949E' }, grid: { color: '#21262D' } },
+                    y: { ticks: { color: '#8B949E' }, grid: { color: '#21262D' } }
+                }
+            };
+
+            // Chart Evolução
+            if (chartEvol) chartEvol.destroy();
+            chartEvol = new Chart(document.getElementById('chartEvolucao'), {
+                type: 'line',
+                data: {
+                    labels: ['Semana 1', 'Semana 2', 'Semana 3', 'Semana 4'],
+                    datasets: [{
+                        label: 'Faturamento (R$)',
+                        data: [2150.0, 2800.0, 3100.0, 2700.16],
+                        borderColor: '#D4AF37',
+                        backgroundColor: 'rgba(212, 175, 55, 0.1)',
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+                options: chartConfig
+            });
+
+            // Chart Despesas
+            if (chartDesp) chartDesp.destroy();
+            chartDesp = new Chart(document.getElementById('chartDespesas'), {
+                type: 'doughnut',
+                data: {
+                    labels: store.despesas.map(d => d.category),
+                    datasets: [{
+                        data: store.despesas.map(d => d.value),
+                        backgroundColor: ['#F43F5E', '#3B82F6', '#8B5CF6', '#10B981']
+                    }]
+                },
+                options: { plugins: { legend: { labels: { color: '#8B949E' } } } }
+            });
+
+            // Chart Profissionais
+            if (chartProf) chartProf.destroy();
+            chartProf = new Chart(document.getElementById('chartProfissionais'), {
+                type: 'bar',
+                data: {
+                    labels: ['Gabriel Bragança', 'Luccas'],
+                    datasets: [{
+                        label: 'Faturamento Gerado (R$)',
+                        data: [6200.0, 4550.16],
+                        backgroundColor: ['#D4AF37', '#3B82F6']
+                    }]
+                },
+                options: chartConfig
+            });
+
+            // Chart Produtos
+            if (chartProd) chartProd.destroy();
+            chartProd = new Chart(document.getElementById('chartProdutos'), {
+                type: 'bar',
+                data: {
+                    labels: ['Bebidas', 'Cabelo/Barba', 'Perfumes'],
+                    datasets: [{
+                        label: 'Vendas (R$)',
+                        data: [720.0, 1150.0, 850.0],
+                        backgroundColor: '#10B981'
+                    }]
+                },
+                options: chartConfig
+            });
+        }
+
+        // Iniciar App
+        window.addEventListener('DOMContentLoaded', () => {
+            initSupabase();
+            renderAll();
+            renderCharts();
+        });
+    </script>
+</body>
+</html>
