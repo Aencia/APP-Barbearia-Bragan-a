@@ -5,8 +5,10 @@ import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
@@ -54,7 +56,7 @@ class BarberViewModel(application: Application) : AndroidViewModel(application) 
     val currentGoal: StateFlow<BillingGoal?> = _currentGoal.asStateFlow()
 
     init {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             // Load config or pre-populate
             repository.ensureDefaultDataPopulated()
             loadCurrentGoals()
@@ -71,15 +73,14 @@ class BarberViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    private suspend fun loadCurrentGoals() {
+    private suspend fun loadCurrentGoals() = withContext(Dispatchers.IO) {
         val monthYear = SimpleDateFormat("MM/yyyy", Locale.getDefault()).format(Date())
         _currentGoal.value = repository.billingGoalDao.getGoalByMonth(monthYear)
     }
 
     // Login Method
-    fun login(email: String, password: String): Boolean {
-        var success = false
-        viewModelScope.launch {
+    fun login(email: String, password: String) {
+        viewModelScope.launch(Dispatchers.IO) {
             val config = repository.ownerDao.getOwnerConfig()
             if (config != null && email.trim().lowercase() == config.email.lowercase() && password == config.passwordHash) {
                 _isLoggedIn.value = true
@@ -88,13 +89,10 @@ class BarberViewModel(application: Application) : AndroidViewModel(application) 
                 // Save session
                 val sharedPrefs = getApplication<Application>().getSharedPreferences("barber_session", Context.MODE_PRIVATE)
                 sharedPrefs.edit().putString("logged_in_email", config.email).apply()
-                success = true
             } else {
                 _loginError.value = "Credenciais inválidas. Verifique seu e-mail e senha."
-                success = false
             }
         }
-        return success
     }
 
     // Logout Method
@@ -107,7 +105,7 @@ class BarberViewModel(application: Application) : AndroidViewModel(application) 
 
     // Password Recovery
     fun recoverPassword(email: String, securityAnswer: String, newPass: String) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             val config = repository.ownerDao.getOwnerConfig()
             if (config != null && email.trim().lowercase() == config.email.lowercase() &&
                 securityAnswer.trim().lowercase() == config.recoveryAnswer.lowercase()
@@ -122,6 +120,35 @@ class BarberViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    fun updateOwnerCredentials(
+        currentPass: String,
+        newEmail: String,
+        newPass: String,
+        recoveryAnswer: String,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val config = repository.ownerDao.getOwnerConfig()
+            if (config != null && currentPass == config.passwordHash) {
+                val updated = config.copy(
+                    email = newEmail.trim().lowercase(),
+                    passwordHash = newPass,
+                    recoveryAnswer = recoveryAnswer
+                )
+                repository.ownerDao.insertOwnerConfig(updated)
+                _ownerEmail.value = updated.email
+                withContext(Dispatchers.Main) {
+                    onSuccess()
+                }
+            } else {
+                withContext(Dispatchers.Main) {
+                    onError("Senha atual incorreta!")
+                }
+            }
+        }
+    }
+
     fun clearAuthMessages() {
         _loginError.value = null
         _recoverySuccess.value = null
@@ -129,7 +156,7 @@ class BarberViewModel(application: Application) : AndroidViewModel(application) 
 
     // --- GOALS CRUD ---
     fun updateGoals(min: Double, med: Double, high: Double) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             val monthYear = SimpleDateFormat("MM/yyyy", Locale.getDefault()).format(Date())
             val updated = BillingGoal(monthYear, minGoal = min, medGoal = med, highGoal = high)
             repository.billingGoalDao.insertGoal(updated)
@@ -139,7 +166,7 @@ class BarberViewModel(application: Application) : AndroidViewModel(application) 
 
     // --- PROFESSIONALS CRUD ---
     fun addProfessional(name: String, role: String, commission: Double, goal: Double) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             repository.professionalDao.insertProfessional(
                 Professional(name = name, role = role, serviceCommissionPercentage = commission, productSalesGoal = goal)
             )
@@ -147,13 +174,13 @@ class BarberViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun updateProfessional(professional: Professional) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             repository.professionalDao.updateProfessional(professional)
         }
     }
 
     fun deleteProfessional(professional: Professional) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             repository.professionalDao.deleteProfessional(professional)
         }
     }
@@ -167,7 +194,7 @@ class BarberViewModel(application: Application) : AndroidViewModel(application) 
         planActive: Boolean = false,
         planStartDate: Long = 0L
     ) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             repository.clientDao.insertClient(
                 Client(
                     name = name,
@@ -185,20 +212,20 @@ class BarberViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun updateClient(client: Client) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             repository.clientDao.updateClient(client)
         }
     }
 
     fun deleteClient(client: Client) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             repository.clientDao.deleteClient(client)
         }
     }
 
     // --- SERVICES CRUD ---
     fun addService(name: String, price: Double, duration: Int, commission: Double) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             repository.serviceDao.insertService(
                 Service(name = name, price = price, durationMinutes = duration, commissionPercentage = commission)
             )
@@ -206,20 +233,20 @@ class BarberViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun updateService(service: Service) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             repository.serviceDao.updateService(service)
         }
     }
 
     fun deleteService(service: Service) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             repository.serviceDao.deleteService(service)
         }
     }
 
     // --- PRODUCTS CRUD ---
     fun addProduct(name: String, category: String, stock: Int, cost: Double, price: Double, commission: Double) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             repository.productDao.insertProduct(
                 Product(name = name, category = category, stock = stock, cost = cost, price = price, commissionPercentage = commission)
             )
@@ -227,13 +254,13 @@ class BarberViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun updateProduct(product: Product) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             repository.productDao.updateProduct(product)
         }
     }
 
     fun deleteProduct(product: Product) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             repository.productDao.deleteProduct(product)
         }
     }
@@ -250,7 +277,7 @@ class BarberViewModel(application: Application) : AndroidViewModel(application) 
         timestamp: Long,
         obs: String
     ) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             // Count sums
             val servicesTotal = servicesSelected.sumOf { it.price }
             val servicesCommission = servicesSelected.sumOf { it.price * (it.commissionPercentage / 100.0) }
@@ -305,14 +332,14 @@ class BarberViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun deleteAppointment(appointment: Appointment) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             repository.appointmentDao.deleteAppointment(appointment)
         }
     }
 
     // --- EXPENSES CRUD ---
     fun addExpense(category: String, desc: String, value: Double, timestamp: Long, isFixed: Boolean) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             repository.expenseDao.insertExpense(
                 Expense(category = category, description = desc, value = value, timestamp = timestamp, isFixed = isFixed)
             )
@@ -320,13 +347,13 @@ class BarberViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun updateExpense(expense: Expense) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             repository.expenseDao.updateExpense(expense)
         }
     }
 
     fun deleteExpense(expense: Expense) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             repository.expenseDao.deleteExpense(expense)
         }
     }

@@ -304,26 +304,20 @@ fun ConfiguracoesScreen(viewModel: BarberViewModel) {
                         Button(
                             onClick = {
                                 if (emailInput.isNotBlank() && currentPass.isNotBlank() && newPass.isNotBlank()) {
-                                    // simple trigger validation directly in ViewModel config update
-                                    val config = viewModel.repository.ownerDao
-                                    val launcher = kotlinx.coroutines.MainScope()
-                                    launcher.launchProjectUpdate {
-                                        val data = config.getOwnerConfig()
-                                        if (data != null && currentPass == data.passwordHash) {
-                                            config.insertOwnerConfig(
-                                                com.example.data.OwnerConfig(
-                                                    email = emailInput.trim().lowercase(),
-                                                    passwordHash = newPass,
-                                                    recoveryAnswer = recoveryQuest
-                                                )
-                                            )
+                                    viewModel.updateOwnerCredentials(
+                                        currentPass = currentPass,
+                                        newEmail = emailInput,
+                                        newPass = newPass,
+                                        recoveryAnswer = recoveryQuest,
+                                        onSuccess = {
                                             changeSuccessMsg = "Credenciais e senha de segurança redefinidas!"
                                             showPassDialog = false
                                             changeErrorMsg = null
-                                        } else {
-                                            changeErrorMsg = "Senha atual incorreta!"
+                                        },
+                                        onError = { err ->
+                                            changeErrorMsg = err
                                         }
-                                    }
+                                    )
                                 }
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = CoreBlue)
@@ -333,17 +327,6 @@ fun ConfiguracoesScreen(viewModel: BarberViewModel) {
                     }
                 }
             }
-        }
-    }
-}
-
-// Simple launch helper to run background transactions for dialog safely
-fun kotlinx.coroutines.CoroutineScope.launchProjectUpdate(block: suspend () -> Unit) {
-    this.launch {
-        try {
-            block()
-        } catch (e: Exception) {
-            e.printStackTrace()
         }
     }
 }

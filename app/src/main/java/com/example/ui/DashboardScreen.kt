@@ -164,36 +164,45 @@ fun DashboardScreen(viewModel: BarberViewModel) {
             IndicatorData("Previsão Mensal", faturamentoPrevisao.toCurrency(), Icons.Outlined.Moving, CoreBlue)
         )
 
-        // Make it flexible with grid
         Column {
             Text("Principais Indicadores", color = TextLight, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 12.dp))
-            FlowRow(
-                modifier = Modifier.fillMaxWidth(),
-                maxItemsInEachRow = 4,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                val boxWidth = if (Locale.getDefault().language == "pt") 165.dp else 165.dp
-                indicators.forEach { ind ->
-                    Card(
-                        modifier = Modifier
-                            .widthIn(min = 160.dp)
-                            .weight(1f),
-                        colors = CardDefaults.cardColors(containerColor = DarkBlueAccent),
-                        shape = RoundedCornerShape(16.dp),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(ind.title, color = TextMuted, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                Icon(ind.icon, contentDescription = ind.title, tint = ind.iconColor, modifier = Modifier.size(18.dp))
+            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                val columns = when {
+                    maxWidth >= 900.dp -> 4
+                    maxWidth >= 550.dp -> 2
+                    else -> 1
+                }
+                val chunkedIndicators = indicators.chunked(columns)
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    chunkedIndicators.forEach { rowItems ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            rowItems.forEach { ind ->
+                                Card(
+                                    modifier = Modifier.weight(1f),
+                                    colors = CardDefaults.cardColors(containerColor = DarkBlueAccent),
+                                    shape = RoundedCornerShape(16.dp),
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                                ) {
+                                    Column(modifier = Modifier.padding(16.dp)) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(ind.title, color = TextMuted, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                            Icon(ind.icon, contentDescription = ind.title, tint = ind.iconColor, modifier = Modifier.size(18.dp))
+                                        }
+                                        Spacer(modifier = Modifier.height(12.dp))
+                                        Text(ind.value, color = TextLight, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
                             }
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Text(ind.value, color = TextLight, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                            repeat(columns - rowItems.size) {
+                                Spacer(modifier = Modifier.weight(1f))
+                            }
                         }
                     }
                 }
@@ -247,20 +256,14 @@ fun DashboardScreen(viewModel: BarberViewModel) {
             }
         }
 
-        // --- CHARTS SECTION (TWO COLUMN ON EXPANDED, FLOWING ON COMPACT) ---
+        // --- CHARTS SECTION (TWO COLUMN ON EXPANDED, STACKED ON COMPACT) ---
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Text("Gráficos de Desempenho", color = TextLight, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
 
-            // Dynamic layout: side by side if possible or stacked
-            FlowRow(
-                modifier = Modifier.fillMaxWidth(),
-                maxItemsInEachRow = 2,
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                // Chart 1: Revenue Evolution Split by Week
+            // Chart 1 Composable
+            val chart1 = @Composable {
                 Card(
-                    modifier = Modifier.weight(1f).widthIn(min = 340.dp),
+                    modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(containerColor = DarkBlueAccent),
                     shape = RoundedCornerShape(16.dp)
                 ) {
@@ -268,7 +271,6 @@ fun DashboardScreen(viewModel: BarberViewModel) {
                         Text("Evolução do Faturamento (Semanal)", color = TextLight, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                         Text("Distribuição do faturamento no mês", color = TextMuted, fontSize = 11.sp, modifier = Modifier.padding(bottom = 16.dp))
 
-                        // Compute billing per week
                         val weekMetrics = DoubleArray(4) { 0.0 }
                         appointments.filter { it.timestamp in monthStart..monthEnd }.forEach { app ->
                             val cal = Calendar.getInstance().apply { timeInMillis = app.timestamp }
@@ -281,7 +283,6 @@ fun DashboardScreen(viewModel: BarberViewModel) {
                             }
                         }
 
-                        // Render custom bars
                         val maxWeekVal = weekMetrics.maxOrNull()?.coerceAtLeast(100.0) ?: 100.0
 
                         Row(
@@ -325,10 +326,12 @@ fun DashboardScreen(viewModel: BarberViewModel) {
                         }
                     }
                 }
+            }
 
-                // Chart 2: Expenses Distribution
+            // Chart 2 Composable
+            val chart2 = @Composable {
                 Card(
-                    modifier = Modifier.weight(1f).widthIn(min = 340.dp),
+                    modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(containerColor = DarkBlueAccent),
                     shape = RoundedCornerShape(16.dp)
                 ) {
@@ -336,7 +339,6 @@ fun DashboardScreen(viewModel: BarberViewModel) {
                         Text("Distribuição de Despesas Fixas", color = TextLight, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                         Text("Maiores custos registrados no sistema", color = TextMuted, fontSize = 11.sp, modifier = Modifier.padding(bottom = 12.dp))
 
-                        // Take up to 5 largest expenses
                         val largestExpenses = expenses.filter { it.timestamp in monthStart..monthEnd }
                             .sortedByDescending { it.value }
                             .take(5)
@@ -387,10 +389,12 @@ fun DashboardScreen(viewModel: BarberViewModel) {
                         }
                     }
                 }
+            }
 
-                // Chart 3: Faturamento por Profissional
+            // Chart 3 Composable
+            val chart3 = @Composable {
                 Card(
-                    modifier = Modifier.weight(1f).widthIn(min = 340.dp),
+                    modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(containerColor = DarkBlueAccent),
                     shape = RoundedCornerShape(16.dp)
                 ) {
@@ -399,7 +403,6 @@ fun DashboardScreen(viewModel: BarberViewModel) {
                         Text("Soma de serviços em atendimentos realizados", color = TextMuted, fontSize = 11.sp, modifier = Modifier.padding(bottom = 16.dp))
 
                         val profBillingMap = mutableMapOf<String, Double>()
-                        // Seed professionals names for safety
                         professionals.forEach { p -> profBillingMap[p.name] = 0.0 }
                         appointments.filter { it.timestamp in monthStart..monthEnd }.forEach { app ->
                             profBillingMap[app.professionalName] = (profBillingMap[app.professionalName] ?: 0.0) + app.totalValue
@@ -441,10 +444,12 @@ fun DashboardScreen(viewModel: BarberViewModel) {
                         }
                     }
                 }
+            }
 
-                // Chart 4: Product Sales Categories
+            // Chart 4 Composable
+            val chart4 = @Composable {
                 Card(
-                    modifier = Modifier.weight(1f).widthIn(min = 340.dp),
+                    modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(containerColor = DarkBlueAccent),
                     shape = RoundedCornerShape(16.dp)
                 ) {
@@ -452,7 +457,6 @@ fun DashboardScreen(viewModel: BarberViewModel) {
                         Text("Vendas de Produtos por Categoria", color = TextLight, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                         Text("Total faturado por categoria de produtos", color = TextMuted, fontSize = 11.sp, modifier = Modifier.padding(bottom = 16.dp))
 
-                        // Category sums
                         val catSums = mutableMapOf("Bebidas" to 0.0, "Cabelo e barba" to 0.0, "Perfumes" to 0.0)
                         appointments.filter { it.timestamp in monthStart..monthEnd }.forEach { app ->
                             if (app.productsJson.isNotBlank()) {
@@ -505,6 +509,38 @@ fun DashboardScreen(viewModel: BarberViewModel) {
                                 }
                             }
                         }
+                    }
+                }
+            }
+
+            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                val isWide = maxWidth >= 720.dp
+                if (isWide) {
+                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            Box(modifier = Modifier.weight(1f)) { chart1() }
+                            Box(modifier = Modifier.weight(1f)) { chart2() }
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            Box(modifier = Modifier.weight(1f)) { chart3() }
+                            Box(modifier = Modifier.weight(1f)) { chart4() }
+                        }
+                    }
+                } else {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        chart1()
+                        chart2()
+                        chart3()
+                        chart4()
                     }
                 }
             }
