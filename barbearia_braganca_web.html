@@ -6,6 +6,7 @@
     <title>Barbearia Bragança - Sistema Web & Supabase Sync</title>
     <!-- Supabase JS Client library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
             --bg-dark: #0F172A;
@@ -528,6 +529,51 @@
             .top-bar { padding: 12px 16px; }
             .content-container { padding: 16px; }
         }
+    
+        /* Custom Charts & Reports Layout */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .chart-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .chart-container {
+            position: relative;
+            height: 260px;
+            width: 100%;
+        }
+        .multi-goals-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+            margin-top: 14px;
+        }
+        .goal-item-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px;
+        }
+        .goal-item-card.reached {
+            border-color: var(--bright-teal);
+            background: rgba(13, 148, 136, 0.08);
+        }
+        .goal-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
     </style>
 </head>
 <body>
@@ -568,6 +614,10 @@
             <li class="nav-item" onclick="switchTab('barbers')">
                 <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
                 <span>Equipe Barbeiros</span>
+            </li>
+            <li class="nav-item" onclick="switchTab('reports')">
+                <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
+                <span>Relatórios & Gráficos</span>
             </li>
             <li class="nav-item" onclick="switchTab('finance')">
                 <svg viewBox="0 0 24 24"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>
@@ -615,30 +665,38 @@
                         <span class="metric-value highlight-teal" id="kpi-today-revenue">R$ 0,00</span>
                     </div>
                     <div class="card metric-card">
+                        <span class="metric-title">Faturamento Semana</span>
+                        <span class="metric-value highlight-blue" id="kpi-week-revenue">R$ 0,00</span>
+                    </div>
+                    <div class="card metric-card">
                         <span class="metric-title">Faturamento Mês</span>
                         <span class="metric-value highlight-gold" id="kpi-month-revenue">R$ 0,00</span>
                     </div>
                     <div class="card metric-card">
-                        <span class="metric-title">Clubes Ativos</span>
-                        <span class="metric-value highlight-blue" id="kpi-active-clubs">0</span>
+                        <span class="metric-title">Previsão Mensal</span>
+                        <span class="metric-value highlight-teal" id="kpi-projected-revenue">R$ 0,00</span>
                     </div>
                     <div class="card metric-card">
-                        <span class="metric-title">Atendimentos Hoje</span>
-                        <span class="metric-value" id="kpi-today-appts">0</span>
+                        <span class="metric-title">Ticket Médio</span>
+                        <span class="metric-value" id="kpi-avg-ticket">R$ 0,00</span>
+                    </div>
+                    <div class="card metric-card">
+                        <span class="metric-title">Lucro Líquido Mês</span>
+                        <span class="metric-value highlight-gold" id="kpi-net-profit-dash">R$ 0,00</span>
                     </div>
                 </div>
 
-                <!-- Goal Bar -->
+                <!-- Multi Goal Box -->
                 <div class="card goal-box">
-                    <div class="goal-header">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                         <div>
-                            <strong>Meta Mensal de Faturamento</strong>
-                            <span id="goal-target-text" style="color: var(--text-muted); font-size: 13px;">(Alvo: R$ 20.000,00)</span>
+                            <h3 style="font-size: 16px;">🎯 Progresso das Metas de Faturamento Mensal</h3>
+                            <p style="color: var(--text-muted); font-size: 13px;">Acompanhamento em tempo real do faturamento acumulado</p>
                         </div>
-                        <strong id="goal-percentage-text" style="color: var(--active-gold);">0%</strong>
+                        <span class="badge badge-gold" id="dash-goal-status-badge">Em andamento</span>
                     </div>
-                    <div class="progress-bar-bg">
-                        <div class="progress-bar-fill" id="goal-progress-fill"></div>
+                    <div class="multi-goals-grid" id="dash-multi-goals-container">
+                        <!-- Populated dynamically -->
                     </div>
                 </div>
 
@@ -862,6 +920,121 @@
                             </thead>
                             <tbody id="expenses-table-body">
                                 <!-- Dynamic -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 7. RELATÓRIOS E GRÁFICOS VIEW -->
+            <section id="view-reports" class="view-section">
+                <!-- Summary Metrics Grid -->
+                <div class="metrics-grid">
+                    <div class="card metric-card">
+                        <span class="metric-title">Faturamento Hoje</span>
+                        <span class="metric-value highlight-teal" id="rep-today-rev">R$ 0,00</span>
+                    </div>
+                    <div class="card metric-card">
+                        <span class="metric-title">Faturamento Semana</span>
+                        <span class="metric-value highlight-blue" id="rep-week-rev">R$ 0,00</span>
+                    </div>
+                    <div class="card metric-card">
+                        <span class="metric-title">Faturamento Mês</span>
+                        <span class="metric-value highlight-gold" id="rep-month-rev">R$ 0,00</span>
+                    </div>
+                    <div class="card metric-card">
+                        <span class="metric-title">Ticket Médio Geral</span>
+                        <span class="metric-value" id="rep-avg-ticket">R$ 0,00</span>
+                    </div>
+                    <div class="card metric-card">
+                        <span class="metric-title">Despesas Totais</span>
+                        <span class="metric-value" style="color: var(--danger-red);" id="rep-total-exp">R$ 0,00</span>
+                    </div>
+                    <div class="card metric-card">
+                        <span class="metric-title">Lucro Líquido Mês</span>
+                        <span class="metric-value highlight-gold" id="rep-net-profit">R$ 0,00</span>
+                    </div>
+                    <div class="card metric-card">
+                        <span class="metric-title">Previsão Mensal</span>
+                        <span class="metric-value highlight-teal" id="rep-projected-rev">R$ 0,00</span>
+                    </div>
+                </div>
+
+                <!-- Goals Breakdown Card -->
+                <div class="card" style="margin-top: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                        <div>
+                            <h3 style="font-size: 16px;">🏆 Status das Metas Financeiras</h3>
+                            <p style="color: var(--text-muted); font-size: 13px;">Meta Mínima (R$ 18.250,00) • Meta Média Alvo (R$ 20.000,00) • Meta Alta (R$ 25.000,00)</p>
+                        </div>
+                    </div>
+                    <div class="multi-goals-grid" id="rep-multi-goals-container">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+
+                <!-- Interactive Charts Grid -->
+                <div class="charts-grid">
+                    <!-- Chart 1: Evolução Semanal -->
+                    <div class="chart-card">
+                        <div>
+                            <h4 style="font-size: 15px; color: var(--text-light);">📈 Evolução Semanal do Faturamento</h4>
+                            <p style="color: var(--text-muted); font-size: 12px;">Comparações por semana no mês vigente</p>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="chartWeeklyRevenue"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Chart 2: Distribuição de Despesas Fixas -->
+                    <div class="chart-card">
+                        <div>
+                            <h4 style="font-size: 15px; color: var(--text-light);">📉 Distribuição de Despesas Fixas & Operacionais</h4>
+                            <p style="color: var(--text-muted); font-size: 12px;">Aluguel, Salários, Luz, Marketing, Cartões e outros</p>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="chartExpensesDistribution"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Chart 3: Faturamento por Profissional -->
+                    <div class="chart-card">
+                        <div>
+                            <h4 style="font-size: 15px; color: var(--text-light);">💈 Faturamento por Profissional</h4>
+                            <p style="color: var(--text-muted); font-size: 12px;">Gabriel Borges, Luccas Barbeiro e Eduardo Ribeiro</p>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="chartBarberRevenue"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Chart 4: Vendas por Categoria de Produtos -->
+                    <div class="chart-card">
+                        <div>
+                            <h4 style="font-size: 15px; color: var(--text-light);">🛍️ Vendas de Produtos por Categoria</h4>
+                            <p style="color: var(--text-muted); font-size: 12px;">Bebidas (Cervejas/Sucos), Cabelo, Barba e Perfumes</p>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="chartProductsCategory"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Fixed Expenses Detail Table -->
+                <div class="card" style="margin-top: 24px;">
+                    <h3 style="margin-bottom: 16px;">📋 Detalhamento de Despesas Fixas Cadastradas</h3>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Descrição / Item</th>
+                                    <th>Categoria</th>
+                                    <th>Vencimento / Data</th>
+                                    <th>Valor Mensal</th>
+                                </tr>
+                            </thead>
+                            <tbody id="fixed-expenses-detail-table">
+                                <!-- Populated dynamically -->
                             </tbody>
                         </table>
                     </div>
@@ -1599,6 +1772,7 @@ ALTER TABLE expenses DISABLE ROW LEVEL SECURITY;</pre>
                 services: ['Catálogo de Serviços', 'Tabela de preços e durações'],
                 products: ['Estoque de Produtos', 'Controle de insumos e vendas de balcão'],
                 barbers: ['Equipe de Barbeiros', 'Profissionais, metas e comissões'],
+                reports: ['Relatórios & Gráficos Interativos', 'Evolução de faturamento, despesas fixas, comissões e metas'],
                 finance: ['Fluxo Financeiro', 'Faturamento x Despesas e Lucro Líquido'],
                 settings: ['Configurações do Sistema', 'Ajuste de metas e backups em JSON']
             };
@@ -1619,6 +1793,7 @@ ALTER TABLE expenses DISABLE ROW LEVEL SECURITY;</pre>
             renderServices();
             renderProducts();
             renderBarbers();
+            renderReports();
             renderFinance();
         }
 
@@ -1626,44 +1801,115 @@ ALTER TABLE expenses DISABLE ROW LEVEL SECURITY;</pre>
             return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0);
         }
 
+                // --- FINANCIAL SUMMARY DATA ENGINE ---
+        function getFinancialSummary() {
+            const db = getDB();
+            const today = new Date();
+            const todayStr = today.toISOString().split('T')[0];
+            const currentYear = today.getFullYear();
+            const currentMonth = today.getMonth();
+            const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+            const currentDay = today.getDate();
+
+            let todayRev = 0;
+            let weekRev = 0;
+            let monthRev = 0;
+            let totalCompletedAppts = 0;
+            let todayApptsCount = 0;
+
+            const sevenDaysAgo = new Date();
+            sevenDaysAgo.setDate(today.getDate() - 7);
+            const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0];
+
+            const barberRevMap = {};
+            db.barbers.forEach(b => { barberRevMap[b.name] = 0; });
+
+            const weekRevMap = { "Semana 1 (Dias 1-7)": 0, "Semana 2 (Dias 8-14)": 0, "Semana 3 (Dias 15-21)": 0, "Semana 4 (Dias 22+)": 0 };
+
+            db.appointments.forEach(a => {
+                if (a.date === todayStr) todayApptsCount++;
+
+                if (a.status === 'Concluído') {
+                    const val = Number(a.totalValue || 0);
+                    totalCompletedAppts++;
+
+                    if (a.date === todayStr) todayRev += val;
+                    if (a.date >= sevenDaysAgoStr) weekRev += val;
+
+                    if (a.date && a.date.startsWith(`${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`)) {
+                        monthRev += val;
+
+                        if (a.barberName) {
+                            barberRevMap[a.barberName] = (barberRevMap[a.barberName] || 0) + val;
+                        }
+
+                        const dayNum = parseInt(a.date.split('-')[2] || '1', 10);
+                        if (dayNum <= 7) weekRevMap["Semana 1 (Dias 1-7)"] += val;
+                        else if (dayNum <= 14) weekRevMap["Semana 2 (Dias 8-14)"] += val;
+                        else if (dayNum <= 21) weekRevMap["Semana 3 (Dias 15-21)"] += val;
+                        else weekRevMap["Semana 4 (Dias 22+)"] += val;
+                    }
+                }
+            });
+
+            let clubRevTotal = 0;
+            let activeClubsCount = 0;
+            db.clients.forEach(c => {
+                if (c.planActive && c.planName !== 'Nenhum') {
+                    activeClubsCount++;
+                    const planVal = Number(c.planValue || 0);
+                    clubRevTotal += planVal;
+                }
+            });
+            monthRev += clubRevTotal;
+
+            const avgTicket = totalCompletedAppts > 0 ? (monthRev - clubRevTotal) / totalCompletedAppts : 0;
+            const dailyAvg = currentDay > 0 ? (monthRev - clubRevTotal) / currentDay : 0;
+            const projectedRev = (dailyAvg * daysInMonth) + clubRevTotal;
+
+            let totalExp = 0;
+            const expCategoryMap = {};
+            db.expenses.forEach(e => {
+                const amt = Number(e.amount || 0);
+                totalExp += amt;
+                const cat = e.category || 'Outros';
+                expCategoryMap[cat] = (expCategoryMap[cat] || 0) + amt;
+            });
+
+            const productCategoryMap = { "Bebidas": 0, "Cabelo": 0, "Barba": 0, "Perfumes": 0 };
+            db.products.forEach(p => {
+                const cat = p.category || (p.name.toLowerCase().includes('cerveja') || p.name.toLowerCase().includes('refrigerante') ? 'Bebidas' : (p.name.toLowerCase().includes('óleo') || p.name.toLowerCase().includes('barba') ? 'Barba' : (p.name.toLowerCase().includes('colônia') ? 'Perfumes' : 'Cabelo')));
+                const estSales = (p.price || 0) * (p.stock < 20 ? 15 : 8);
+                productCategoryMap[cat] = (productCategoryMap[cat] || 0) + estSales;
+            });
+
+            const netProfit = monthRev - totalExp;
+
+            return {
+                todayRev, weekRev, monthRev, avgTicket, projectedRev,
+                totalExp, netProfit, clubRevTotal, activeClubsCount, todayApptsCount,
+                barberRevMap, weekRevMap, expCategoryMap, productCategoryMap,
+                goalMin: db.goal?.min || 18250,
+                goalMed: db.goal?.med || 20000,
+                goalHigh: db.goal?.high || 25000
+            };
+        }
+
         // --- RENDERERS ---
         function renderDashboard() {
+            const summary = getFinancialSummary();
             const db = getDB();
             const today = new Date().toISOString().split('T')[0];
 
-            let todayRevenue = 0;
-            let monthRevenue = 0;
-            let todayApptsCount = 0;
+            document.getElementById('kpi-today-revenue').innerText = formatMoney(summary.todayRev);
+            document.getElementById('kpi-week-revenue').innerText = formatMoney(summary.weekRev);
+            document.getElementById('kpi-month-revenue').innerText = formatMoney(summary.monthRev);
+            document.getElementById('kpi-projected-revenue').innerText = formatMoney(summary.projectedRev);
+            document.getElementById('kpi-avg-ticket').innerText = formatMoney(summary.avgTicket);
+            document.getElementById('kpi-net-profit-dash').innerText = formatMoney(summary.netProfit);
 
-            db.appointments.forEach(a => {
-                if (a.status === 'Concluído') {
-                    if (a.date === today) {
-                        todayRevenue += Number(a.totalValue);
-                        todayApptsCount++;
-                    }
-                    monthRevenue += Number(a.totalValue);
-                }
-            });
-
-            let activeClubs = 0;
-            db.clients.forEach(c => {
-                if (c.planActive && c.planName !== 'Nenhum') {
-                    activeClubs++;
-                    monthRevenue += Number(c.planValue || 0);
-                }
-            });
-
-            document.getElementById('kpi-today-revenue').innerText = formatMoney(todayRevenue);
-            document.getElementById('kpi-month-revenue').innerText = formatMoney(monthRevenue);
-            document.getElementById('kpi-active-clubs').innerText = activeClubs;
-            document.getElementById('kpi-today-appts').innerText = todayApptsCount;
-
-            // Goal
-            const target = db.goal?.med || 20000;
-            const pct = Math.min(100, Math.round((monthRevenue / target) * 100));
-            document.getElementById('goal-target-text').innerText = `(Alvo: ${formatMoney(target)})`;
-            document.getElementById('goal-percentage-text').innerText = `${pct}%`;
-            document.getElementById('goal-progress-fill').style.width = `${pct}%`;
+            // Render Multi Goals
+            renderGoalsCards('dash-multi-goals-container', summary);
 
             // Today Table
             const todayAppts = db.appointments.filter(a => a.date === today);
@@ -1687,6 +1933,184 @@ ALTER TABLE expenses DISABLE ROW LEVEL SECURITY;</pre>
                         </td>
                     </tr>
                 `).join('');
+            }
+        }
+
+        function renderGoalsCards(containerId, summary) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+
+            const goals = [
+                { label: "Meta Mínima", target: summary.goalMin, color: "var(--core-blue)" },
+                { label: "Meta Média (Alvo)", target: summary.goalMed, color: "var(--active-gold)" },
+                { label: "Meta Alta", target: summary.goalHigh, color: "var(--bright-teal)" }
+            ];
+
+            container.innerHTML = goals.map(g => {
+                const pct = Math.min(100, Math.round((summary.monthRev / g.target) * 100));
+                const reached = summary.monthRev >= g.target;
+                return `
+                    <div class="goal-item-card ${reached ? 'reached' : ''}">
+                        <div class="goal-item-header">
+                            <strong style="font-size: 14px;">${g.label}</strong>
+                            <span class="badge ${reached ? 'badge-completed' : 'badge-scheduled'}">${reached ? 'Atingida! 🎉' : pct + '%'}</span>
+                        </div>
+                        <div style="font-size: 20px; font-weight: 700; color: ${g.color}; margin-bottom: 6px;">
+                            ${formatMoney(g.target)}
+                        </div>
+                        <div class="progress-bar-bg" style="height: 8px;">
+                            <div class="progress-bar-fill" style="width: ${pct}%; background: ${g.color};"></div>
+                        </div>
+                        <div style="font-size: 12px; color: var(--text-muted); margin-top: 6px; display: flex; justify-content: space-between;">
+                            <span>Atual: ${formatMoney(summary.monthRev)}</span>
+                            <span>Faltam: ${formatMoney(Math.max(0, g.target - summary.monthRev))}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Global chart instances
+        let chartWeeklyInst = null;
+        let chartExpensesInst = null;
+        let chartBarberInst = null;
+        let chartProductInst = null;
+
+        function renderReports() {
+            const summary = getFinancialSummary();
+
+            document.getElementById('rep-today-rev').innerText = formatMoney(summary.todayRev);
+            document.getElementById('rep-week-rev').innerText = formatMoney(summary.weekRev);
+            document.getElementById('rep-month-rev').innerText = formatMoney(summary.monthRev);
+            document.getElementById('rep-avg-ticket').innerText = formatMoney(summary.avgTicket);
+            document.getElementById('rep-total-exp').innerText = formatMoney(summary.totalExp);
+            document.getElementById('rep-net-profit').innerText = formatMoney(summary.netProfit);
+            document.getElementById('rep-projected-rev').innerText = formatMoney(summary.projectedRev);
+
+            renderGoalsCards('rep-multi-goals-container', summary);
+
+            // Render Fixed Expenses Detail Table
+            const db = getDB();
+            const expTbody = document.getElementById('fixed-expenses-detail-table');
+            if (expTbody) {
+                expTbody.innerHTML = db.expenses.map(e => `
+                    <tr>
+                        <td><strong>${e.description}</strong></td>
+                        <td><span class="badge badge-scheduled">${e.category}</span></td>
+                        <td>${e.date || '-'}</td>
+                        <td style="color: var(--danger-red); font-weight: 600;">- ${formatMoney(e.amount)}</td>
+                    </tr>
+                `).join('');
+            }
+
+            // Check if Chart.js is loaded
+            if (typeof Chart === 'undefined') return;
+
+            // Chart 1: Weekly Revenue
+            const ctx1 = document.getElementById('chartWeeklyRevenue')?.getContext('2d');
+            if (ctx1) {
+                if (chartWeeklyInst) chartWeeklyInst.destroy();
+                chartWeeklyInst = new Chart(ctx1, {
+                    type: 'bar',
+                    data: {
+                        labels: Object.keys(summary.weekRevMap),
+                        datasets: [{
+                            label: 'Faturamento (R$)',
+                            data: Object.values(summary.weekRevMap),
+                            backgroundColor: 'rgba(37, 99, 235, 0.7)',
+                            borderColor: '#2563EB',
+                            borderWidth: 2,
+                            borderRadius: 8
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: { ticks: { color: '#94A3B8' }, grid: { color: '#334155' } },
+                            x: { ticks: { color: '#94A3B8' }, grid: { display: false } }
+                        }
+                    }
+                });
+            }
+
+            // Chart 2: Expenses Distribution
+            const ctx2 = document.getElementById('chartExpensesDistribution')?.getContext('2d');
+            if (ctx2) {
+                if (chartExpensesInst) chartExpensesInst.destroy();
+                const expLabels = Object.keys(summary.expCategoryMap);
+                const expValues = Object.values(summary.expCategoryMap);
+
+                chartExpensesInst = new Chart(ctx2, {
+                    type: 'doughnut',
+                    data: {
+                        labels: expLabels,
+                        datasets: [{
+                            data: expValues,
+                            backgroundColor: ['#EF4444', '#F59E0B', '#2563EB', '#0D9488', '#8B5CF6', '#EC4899', '#6366F1', '#14B8A6']
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { position: 'right', labels: { color: '#F8FAFC', font: { size: 11 } } } }
+                    }
+                });
+            }
+
+            // Chart 3: Barber Revenue
+            const ctx3 = document.getElementById('chartBarberRevenue')?.getContext('2d');
+            if (ctx3) {
+                if (chartBarberInst) chartBarberInst.destroy();
+                chartBarberInst = new Chart(ctx3, {
+                    type: 'bar',
+                    data: {
+                        labels: Object.keys(summary.barberRevMap),
+                        datasets: [{
+                            label: 'Faturamento Gerado (R$)',
+                            data: Object.values(summary.barberRevMap),
+                            backgroundColor: ['#F59E0B', '#0D9488', '#2563EB'],
+                            borderRadius: 8
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: { ticks: { color: '#94A3B8' }, grid: { color: '#334155' } },
+                            x: { ticks: { color: '#94A3B8' }, grid: { display: false } }
+                        }
+                    }
+                });
+            }
+
+            // Chart 4: Products Category
+            const ctx4 = document.getElementById('chartProductsCategory')?.getContext('2d');
+            if (ctx4) {
+                if (chartProductInst) chartProductInst.destroy();
+                chartProductInst = new Chart(ctx4, {
+                    type: 'bar',
+                    data: {
+                        labels: Object.keys(summary.productCategoryMap),
+                        datasets: [{
+                            label: 'Vendas Estimadas (R$)',
+                            data: Object.values(summary.productCategoryMap),
+                            backgroundColor: ['#10B981', '#3B82F6', '#8B5CF6', '#F59E0B'],
+                            borderRadius: 8
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: { ticks: { color: '#94A3B8' }, grid: { color: '#334155' } },
+                            x: { ticks: { color: '#94A3B8' }, grid: { display: false } }
+                        }
+                    }
+                });
             }
         }
 
