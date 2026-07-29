@@ -1,763 +1,1999 @@
 <!DOCTYPE html>
-<html lang="pt-BR" class="dark">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Barbearia Bragança - Sistema de Gestão</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        gold: { DEFAULT: '#D4AF37', hover: '#E5C158', dark: '#AA8822' },
-                        navy: { 900: '#0B0E14', 800: '#161B22', 700: '#21262D', 600: '#30363D' }
-                    }
-                }
-            }
-        }
-    </script>
-    <!-- FontAwesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Supabase JS Client -->
+    <title>Barbearia Bragança - Sistema Web & Supabase Sync</title>
+    <!-- Supabase JS Client library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body { background-color: #0B0E14; color: #F0F6FC; font-family: system-ui, -apple-system, sans-serif; }
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: #161B22; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #30363D; border-radius: 4px; }
+        :root {
+            --bg-dark: #0F172A;
+            --bg-card: #1E293B;
+            --bg-card-hover: #334155;
+            --border-color: #334155;
+            --core-blue: #2563EB;
+            --bright-teal: #0D9488;
+            --active-gold: #F59E0B;
+            --danger-red: #EF4444;
+            --purple-supabase: #3ECF8E;
+            --text-light: #F8FAFC;
+            --text-muted: #94A3B8;
+            --font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: var(--font-family);
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            display: flex;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            width: 260px;
+            background-color: var(--bg-card);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s ease;
+            z-index: 100;
+        }
+
+        .brand-header {
+            padding: 24px 20px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .brand-logo {
+            width: 44px;
+            height: 44px;
+            background: #0F172A;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .brand-logo-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 10px;
+        }
+
+        .brand-title h1 {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-light);
+            line-height: 1.2;
+        }
+
+        .brand-title span {
+            font-size: 12px;
+            color: var(--active-gold);
+            font-weight: 600;
+        }
+
+        .nav-list {
+            list-style: none;
+            padding: 16px 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 10px;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .nav-item:hover {
+            background-color: var(--bg-card-hover);
+            color: var(--text-light);
+        }
+
+        .nav-item.active {
+            background-color: var(--core-blue);
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        .nav-item svg {
+            width: 20px;
+            height: 20px;
+            fill: currentColor;
+        }
+
+        /* Main Content Layout */
+        .main-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .top-bar {
+            padding: 16px 28px;
+            background-color: rgba(30, 41, 59, 0.85);
+            backdrop-filter: blur(8px);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 90;
+        }
+
+        .page-title h2 {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .page-title p {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .sync-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background-color: var(--bg-dark);
+            padding: 8px 16px;
+            border-radius: 20px;
+            border: 1px solid var(--border-color);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .sync-badge:hover {
+            border-color: var(--purple-supabase);
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: #94A3B8;
+        }
+
+        .status-dot.online { background-color: var(--purple-supabase); box-shadow: 0 0 8px var(--purple-supabase); }
+        .status-dot.offline { background-color: var(--active-gold); }
+
+        .content-container {
+            padding: 28px;
+            max-width: 1400px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        /* View Sections */
+        .view-section {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .view-section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Cards Grid */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 18px;
+            margin-bottom: 24px;
+        }
+
+        .card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.2);
+        }
+
+        .metric-card {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .metric-title {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+
+        .metric-value {
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--text-light);
+        }
+
+        .metric-value.highlight-gold { color: var(--active-gold); }
+        .metric-value.highlight-teal { color: var(--bright-teal); }
+        .metric-value.highlight-blue { color: #60A5FA; }
+
+        /* Goal Progress Bar */
+        .goal-box {
+            margin-bottom: 24px;
+        }
+
+        .goal-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .progress-bar-bg {
+            height: 12px;
+            background-color: var(--bg-dark);
+            border-radius: 6px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--core-blue), var(--bright-teal), var(--active-gold));
+            width: 0%;
+            transition: width 0.5s ease;
+            border-radius: 6px;
+        }
+
+        /* Action Buttons */
+        .btn {
+            padding: 10px 18px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary {
+            background-color: var(--core-blue);
+            color: #ffffff;
+        }
+
+        .btn-primary:hover {
+            background-color: #1D4ED8;
+        }
+
+        .btn-success {
+            background-color: var(--bright-teal);
+            color: #ffffff;
+        }
+
+        .btn-success:hover {
+            background-color: #0F766E;
+        }
+
+        .btn-supabase {
+            background-color: var(--purple-supabase);
+            color: #000000;
+            font-weight: 700;
+        }
+
+        .btn-supabase:hover {
+            opacity: 0.9;
+        }
+
+        .btn-outline {
+            background-color: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-light);
+        }
+
+        .btn-outline:hover {
+            background-color: var(--bg-card-hover);
+        }
+
+        .btn-danger {
+            background-color: rgba(239, 68, 68, 0.2);
+            color: var(--danger-red);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .btn-danger:hover {
+            background-color: rgba(239, 68, 68, 0.4);
+        }
+
+        .actions-bar {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        /* Tables */
+        .table-container {
+            width: 100%;
+            overflow-x: auto;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 14px;
+        }
+
+        th {
+            background-color: rgba(15, 23, 42, 0.6);
+            padding: 14px 18px;
+            color: var(--text-muted);
+            font-weight: 600;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        td {
+            padding: 14px 18px;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-light);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover td {
+            background-color: rgba(51, 65, 85, 0.4);
+        }
+
+        /* Badges */
+        .badge {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 700;
+            display: inline-block;
+        }
+
+        .badge-scheduled { background: rgba(59, 130, 246, 0.2); color: #60A5FA; }
+        .badge-completed { background: rgba(13, 148, 136, 0.2); color: #2DD4BF; }
+        .badge-cancelled { background: rgba(239, 68, 68, 0.2); color: #F87171; }
+        .badge-gold { background: rgba(245, 158, 11, 0.2); color: #FBBF24; }
+
+        /* Modal Styles */
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+
+        .modal-backdrop.active {
+            display: flex;
+        }
+
+        .modal-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            width: 100%;
+            max-width: 580px;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 28px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+            animation: modalUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes modalUp {
+            from { transform: scale(0.95) translateY(10px); opacity: 0; }
+            to { transform: scale(1) translateY(0); opacity: 1; }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h3 {
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        .close-btn:hover { color: var(--text-light); }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            font-size: 13px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .form-control {
+            background-color: var(--bg-dark);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 12px 14px;
+            color: var(--text-light);
+            font-size: 14px;
+            outline: none;
+        }
+
+        .form-control:focus {
+            border-color: var(--core-blue);
+        }
+
+        pre {
+            background-color: var(--bg-dark);
+            padding: 14px;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            color: var(--purple-supabase);
+            font-size: 12px;
+            overflow-x: auto;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+
+        /* Banner Cloud Sync */
+        .supabase-banner {
+            background: linear-gradient(135deg, rgba(62, 207, 142, 0.15), rgba(37, 99, 235, 0.15));
+            border: 1px solid rgba(62, 207, 142, 0.4);
+            border-radius: 16px;
+            padding: 18px 24px;
+            margin-bottom: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        /* Responsive Mobile Layout */
+        @media (max-width: 768px) {
+            body { flex-direction: column; }
+            .sidebar {
+                width: 100%;
+                border-right: none;
+                border-bottom: 1px solid var(--border-color);
+            }
+            .nav-list {
+                flex-direction: row;
+                overflow-x: auto;
+                padding: 10px;
+            }
+            .nav-item span { display: none; }
+            .top-bar { padding: 12px 16px; }
+            .content-container { padding: 16px; }
+        }
     </style>
 </head>
-<body class="flex flex-col md:flex-row min-h-screen custom-scrollbar">
+<body>
 
-    <!-- SIDEBAR DE NAVEGAÇÃO -->
-    <aside class="w-full md:w-64 bg-navy-800 border-r border-navy-600 flex-shrink-0 flex flex-col justify-between">
-        <div>
-            <!-- Header / Logo -->
-            <div class="p-5 border-b border-navy-600 flex items-center justify-between">
-                <div class="flex items-center space-x-3">
-                    <div class="w-10 h-10 rounded-full bg-gold/20 border border-gold flex items-center justify-center text-gold font-bold text-xl">
-                        <i class="fa-solid font-scissors"></i>
-                    </div>
-                    <div>
-                        <h1 class="font-bold text-white tracking-wide leading-tight">Barbearia Bragança</h1>
-                        <span class="text-xs text-gold font-medium">Gestão Integrada</span>
-                    </div>
-                </div>
+    <!-- SIDEBAR NAVIGATION -->
+    <aside class="sidebar">
+        <div class="brand-header">
+            <div class="brand-logo">
+                <img src="WhatsApp Image 2026-07-28 at 22.21.29.jpeg" alt="Logo Barbearia Bragança" class="brand-logo-img" onerror="this.onerror=null; this.src='WhatsApp%20Image%202026-07-28%20at%2022.21.29.jpeg';">
             </div>
-
-            <!-- Menus -->
-            <nav class="p-3 space-y-1">
-                <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium transition text-white bg-navy-700 border-l-4 border-gold">
-                    <i class="fa-solid fa-chart-line w-5 text-gold"></i>
-                    <span>Dashboard</span>
-                </button>
-                <button onclick="switchTab('atendimentos')" id="nav-atendimentos" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-navy-700 transition">
-                    <i class="fa-solid fa-calendar-check w-5 text-blue-400"></i>
-                    <span>Atendimentos</span>
-                </button>
-                <button onclick="switchTab('clientes')" id="nav-clientes" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-navy-700 transition">
-                    <i class="fa-solid fa-users w-5 text-emerald-400"></i>
-                    <span>Clientes & Clube</span>
-                </button>
-                <button onclick="switchTab('profissionais')" id="nav-profissionais" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-navy-700 transition">
-                    <i class="fa-solid fa-user-ninja w-5 text-purple-400"></i>
-                    <span>Profissionais</span>
-                </button>
-                <button onclick="switchTab('servicos')" id="nav-servicos" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-navy-700 transition">
-                    <i class="fa-solid fa-cut w-5 text-amber-400"></i>
-                    <span>Serviços & Produtos</span>
-                </button>
-                <button onclick="switchTab('financeiro')" id="nav-financeiro" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-navy-700 transition">
-                    <i class="fa-solid fa-wallet w-5 text-rose-400"></i>
-                    <span>Financeiro</span>
-                </button>
-                <button onclick="switchTab('configuracoes')" id="nav-configuracoes" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-navy-700 transition">
-                    <i class="fa-solid fa-gear w-5 text-gray-400"></i>
-                    <span>Configurações & API</span>
-                </button>
-            </nav>
-        </div>
-
-        <!-- Connection Status -->
-        <div class="p-4 border-t border-navy-600 bg-navy-900/50">
-            <div class="flex items-center justify-between text-xs">
-                <span class="text-gray-400">Banco de Dados:</span>
-                <span id="db-status-badge" class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                    <i class="fa-solid fa-database mr-1"></i> LocalStorage
-                </span>
+            <div class="brand-title">
+                <h1>BARBEARIA</h1>
+                <span>BRAGANÇA</span>
             </div>
         </div>
+
+        <ul class="nav-list">
+            <li class="nav-item active" onclick="switchTab('dashboard')">
+                <svg viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+                <span>Dashboard</span>
+            </li>
+            <li class="nav-item" onclick="switchTab('appointments')">
+                <svg viewBox="0 0 24 24"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11z"/></svg>
+                <span>Atendimentos</span>
+            </li>
+            <li class="nav-item" onclick="switchTab('clients')">
+                <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                <span>Clientes & Clubes</span>
+            </li>
+            <li class="nav-item" onclick="switchTab('services')">
+                <svg viewBox="0 0 24 24"><path d="M9.64 7.64c.21-.21.21-.55 0-.77L7.92 5.15c-.21-.21-.55-.21-.77 0L5.43 6.87c-.21.21-.21.55 0 .77l1.72 1.72c.21.21.55.21.77 0l1.72-1.72zm11.23 10.23l-8.5-8.5c-.39-.39-1.02-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.02 0 1.41l8.5 8.5c.39.39 1.02.39 1.41 0l1.06-1.06c.39-.39.39-1.03 0-1.41z"/></svg>
+                <span>Serviços</span>
+            </li>
+            <li class="nav-item" onclick="switchTab('products')">
+                <svg viewBox="0 0 24 24"><path d="M18 6h-2c0-2.21-1.79-4-4-4S8 3.79 8 6H6c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-6-2c1.1 0 2 .9 2 2h-4c0-1.1.9-2 2-2zm6 16H6V8h2v2c0 .55.45 1 1 1s1-.45 1-1V8h4v2c0 .55.45 1 1 1s1-.45 1-1V8h2v12z"/></svg>
+                <span>Produtos</span>
+            </li>
+            <li class="nav-item" onclick="switchTab('barbers')">
+                <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+                <span>Equipe Barbeiros</span>
+            </li>
+            <li class="nav-item" onclick="switchTab('finance')">
+                <svg viewBox="0 0 24 24"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>
+                <span>Financeiro</span>
+            </li>
+            <li class="nav-item" onclick="switchTab('settings')">
+                <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+                <span>Configurações</span>
+            </li>
+        </ul>
     </aside>
 
-    <!-- CONTEÚDO PRINCIPAL -->
-    <main class="flex-1 p-4 md:p-8 overflow-y-auto custom-scrollbar">
+    <!-- MAIN CONTENT -->
+    <div class="main-wrapper">
+        <header class="top-bar">
+            <div class="page-title">
+                <h2 id="current-title">Dashboard Geral</h2>
+                <p id="current-subtitle">Visão consolidada da operação e faturamento da barbearia</p>
+            </div>
+            
+            <div class="sync-badge" onclick="openModal('modal-supabase-config')">
+                <span class="status-dot" id="sync-dot"></span>
+                <span id="sync-status-text">Conectar Nuvem (Supabase)</span>
+            </div>
+        </header>
 
-        <!-- TAB 1: DASHBOARD -->
-        <section id="tab-dashboard" class="space-y-6">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div class="content-container">
+
+            <!-- BANNER CONFIGURAR SUPABASE SE NÃO CONECTADO -->
+            <div id="banner-connect-supabase" class="supabase-banner">
                 <div>
-                    <h2 class="text-2xl font-bold text-white">Painel de Controle</h2>
-                    <p class="text-sm text-gray-400">Visão geral do desempenho e métricas da Barbearia Bragança</p>
+                    <h3 style="color: var(--purple-supabase); font-size: 16px; margin-bottom: 4px;">☁️ Sincronização em Nuvem (Supabase)</h3>
+                    <p style="font-size: 13px; color: var(--text-muted);">
+                        Para que todos os seus agendamentos, clientes e dados fiquem sincronizados instantaneamente entre computadores e celulares diferentes, conecte seu projeto Supabase gratuito.
+                    </p>
                 </div>
-                <button onclick="openNovoAtendimentoModal()" class="bg-gold hover:bg-gold-hover text-navy-900 font-bold px-4 py-2.5 rounded-lg text-sm flex items-center space-x-2 transition shadow-lg">
-                    <i class="fa-solid fa-plus"></i>
-                    <span>Novo Atendimento</span>
-                </button>
+                <button class="btn btn-supabase" onclick="openModal('modal-supabase-config')">Configurar Supabase Agora</button>
             </div>
 
-            <!-- CARDS DE METRICAS (KPIs) -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                <div class="bg-navy-800 border border-navy-600 rounded-xl p-4 flex flex-col justify-between">
-                    <div class="flex items-center justify-between text-gray-400 mb-2">
-                        <span class="text-xs font-semibold uppercase">Atendimentos</span>
-                        <i class="fa-solid fa-scissors text-gold"></i>
+            <!-- 1. DASHBOARD VIEW -->
+            <section id="view-dashboard" class="view-section active">
+                <div class="metrics-grid">
+                    <div class="card metric-card">
+                        <span class="metric-title">Faturamento Hoje</span>
+                        <span class="metric-value highlight-teal" id="kpi-today-revenue">R$ 0,00</span>
                     </div>
-                    <span id="kpi-atendimentos" class="text-2xl font-bold text-white">151</span>
-                    <span class="text-[11px] text-emerald-400 mt-1"><i class="fa-solid fa-arrow-up mr-1"></i>Finalizados no mês</span>
-                </div>
-
-                <div class="bg-navy-800 border border-navy-600 rounded-xl p-4 flex flex-col justify-between">
-                    <div class="flex items-center justify-between text-gray-400 mb-2">
-                        <span class="text-xs font-semibold uppercase">Faturamento</span>
-                        <i class="fa-solid fa-brazilian-real-sign text-emerald-400"></i>
+                    <div class="card metric-card">
+                        <span class="metric-title">Faturamento Mês</span>
+                        <span class="metric-value highlight-gold" id="kpi-month-revenue">R$ 0,00</span>
                     </div>
-                    <span id="kpi-faturamento" class="text-2xl font-bold text-emerald-400">R$ 10.750,16</span>
-                    <span class="text-[11px] text-gray-400 mt-1">Bruto total</span>
-                </div>
-
-                <div class="bg-navy-800 border border-navy-600 rounded-xl p-4 flex flex-col justify-between">
-                    <div class="flex items-center justify-between text-gray-400 mb-2">
-                        <span class="text-xs font-semibold uppercase">Ticket Médio</span>
-                        <i class="fa-solid fa-receipt text-blue-400"></i>
+                    <div class="card metric-card">
+                        <span class="metric-title">Clubes Ativos</span>
+                        <span class="metric-value highlight-blue" id="kpi-active-clubs">0</span>
                     </div>
-                    <span id="kpi-ticket" class="text-2xl font-bold text-white">R$ 71,19</span>
-                    <span class="text-[11px] text-gray-400 mt-1">Por cliente</span>
-                </div>
-
-                <div class="bg-navy-800 border border-navy-600 rounded-xl p-4 flex flex-col justify-between">
-                    <div class="flex items-center justify-between text-gray-400 mb-2">
-                        <span class="text-xs font-semibold uppercase">Taxa de Retorno</span>
-                        <i class="fa-solid fa-rotate-right text-purple-400"></i>
+                    <div class="card metric-card">
+                        <span class="metric-title">Atendimentos Hoje</span>
+                        <span class="metric-value" id="kpi-today-appts">0</span>
                     </div>
-                    <span id="kpi-retorno" class="text-2xl font-bold text-purple-300">84%</span>
-                    <span class="text-[11px] text-purple-400 mt-1">Clientes recorrentes</span>
                 </div>
 
-                <div class="bg-navy-800 border border-navy-600 rounded-xl p-4 flex flex-col justify-between">
-                    <div class="flex items-center justify-between text-gray-400 mb-2">
-                        <span class="text-xs font-semibold uppercase">Previsão Mensal</span>
-                        <i class="fa-solid fa-chart-line text-amber-400"></i>
+                <!-- Goal Bar -->
+                <div class="card goal-box">
+                    <div class="goal-header">
+                        <div>
+                            <strong>Meta Mensal de Faturamento</strong>
+                            <span id="goal-target-text" style="color: var(--text-muted); font-size: 13px;">(Alvo: R$ 20.000,00)</span>
+                        </div>
+                        <strong id="goal-percentage-text" style="color: var(--active-gold);">0%</strong>
                     </div>
-                    <span id="kpi-previsao" class="text-2xl font-bold text-amber-300">R$ 18.250,00</span>
-                    <span class="text-[11px] text-gray-400 mt-1">Estimada no mês</span>
-                </div>
-            </div>
-
-            <!-- GRÁFICOS -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div class="bg-navy-800 border border-navy-600 rounded-xl p-5">
-                    <h3 class="font-bold text-white text-base mb-1">Evolução do Faturamento (Semanal)</h3>
-                    <p class="text-xs text-gray-400 mb-4">Faturamento distribuído ao longo das semanas</p>
-                    <div class="h-64"><canvas id="chartEvolucao"></canvas></div>
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill" id="goal-progress-fill"></div>
+                    </div>
                 </div>
 
-                <div class="bg-navy-800 border border-navy-600 rounded-xl p-5">
-                    <h3 class="font-bold text-white text-base mb-1">Despesas por Categoria</h3>
-                    <p class="text-xs text-gray-400 mb-4">Distribuição de custos fixos e operacionais</p>
-                    <div class="h-64 flex justify-center"><canvas id="chartDespesas"></canvas></div>
+                <div class="actions-bar">
+                    <button class="btn btn-primary" onclick="openModal('modal-appointment')">+ Novo Agendamento</button>
+                    <button class="btn btn-success" onclick="openModal('modal-client')">+ Novo Cliente / Clube</button>
+                    <button class="btn btn-outline" onclick="openModal('modal-expense')">+ Lançar Despesa</button>
+                    <button class="btn btn-outline" onclick="manualSyncWithCloud()">🔄 Atualizar Dados</button>
                 </div>
 
-                <div class="bg-navy-800 border border-navy-600 rounded-xl p-5">
-                    <h3 class="font-bold text-white text-base mb-1">Faturamento por Profissional</h3>
-                    <p class="text-xs text-gray-400 mb-4">Total gerado em serviços e comissões</p>
-                    <div class="h-64"><canvas id="chartProfissionais"></canvas></div>
-                </div>
-
-                <div class="bg-navy-800 border border-navy-600 rounded-xl p-5">
-                    <h3 class="font-bold text-white text-base mb-1">Vendas de Produtos por Categoria</h3>
-                    <p class="text-xs text-gray-400 mb-4">Bebidas, Cabelo/Barba e Perfumes</p>
-                    <div class="h-64"><canvas id="chartProdutos"></canvas></div>
-                </div>
-            </div>
-        </section>
-
-        <!-- TAB 2: ATENDIMENTOS -->
-        <section id="tab-atendimentos" class="hidden space-y-6">
-            <div class="flex items-center justify-between">
-                <div>
-                    <h2 class="text-2xl font-bold text-white">Histórico de Atendimentos</h2>
-                    <p class="text-sm text-gray-400">Lançamento de cortes, serviços e venda de produtos</p>
-                </div>
-                <button onclick="openNovoAtendimentoModal()" class="bg-gold hover:bg-gold-hover text-navy-900 font-bold px-4 py-2.5 rounded-lg text-sm flex items-center space-x-2 transition">
-                    <i class="fa-solid fa-plus"></i>
-                    <span>Lançar Atendimento</span>
-                </button>
-            </div>
-
-            <div class="bg-navy-800 border border-navy-600 rounded-xl overflow-hidden">
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left text-sm text-gray-300">
-                        <thead class="bg-navy-700 text-xs uppercase text-gray-400">
-                            <tr>
-                                <th class="p-4">Data / Hora</th>
-                                <th class="p-4">Cliente</th>
-                                <th class="p-4">Profissional</th>
-                                <th class="p-4">Pagamento</th>
-                                <th class="p-4 text-right">Comissão</th>
-                                <th class="p-4 text-right">Valor Total</th>
-                                <th class="p-4 text-center">Ação</th>
-                            </tr>
-                        </thead>
-                        <tbody id="lista-atendimentos" class="divide-y divide-navy-600">
-                            <!-- Injetado dinamicamente -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
-
-        <!-- TAB 3: CLIENTES -->
-        <section id="tab-clientes" class="hidden space-y-6">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                    <h2 class="text-2xl font-bold text-white">Base de Clientes & Clube</h2>
-                    <p class="text-sm text-gray-400">Gestão de contatos e planos de fidelidade</p>
-                </div>
-                <div class="flex space-x-2">
-                    <input type="text" id="busca-cliente" onkeyup="filtrarClientes()" placeholder="Buscar cliente..." class="bg-navy-700 border border-navy-600 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-gold">
-                    <button onclick="openNovoClienteModal()" class="bg-gold hover:bg-gold-hover text-navy-900 font-bold px-4 py-2.5 rounded-lg text-sm flex items-center space-x-2 transition">
-                        <i class="fa-solid fa-user-plus"></i>
-                        <span>Novo Cliente</span>
-                    </button>
-                </div>
-            </div>
-
-            <div class="bg-navy-800 border border-navy-600 rounded-xl overflow-hidden">
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left text-sm text-gray-300">
-                        <thead class="bg-navy-700 text-xs uppercase text-gray-400">
-                            <tr>
-                                <th class="p-4">Nome do Cliente</th>
-                                <th class="p-4">Telefone</th>
-                                <th class="p-4 text-center">Visitas Total</th>
-                                <th class="p-4">Plano Clube</th>
-                                <th class="p-4 text-right">Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody id="lista-clientes" class="divide-y divide-navy-600">
-                            <!-- Injetado dinamicamente -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
-
-        <!-- TAB 4: PROFISSIONAIS -->
-        <section id="tab-profissionais" class="hidden space-y-6">
-            <div class="flex items-center justify-between">
-                <div>
-                    <h2 class="text-2xl font-bold text-white">Equipe de Profissionais</h2>
-                    <p class="text-sm text-gray-400">Barbeiros, comissões e metas de produtos</p>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="lista-profissionais">
-                <!-- Cards injetados via JS -->
-            </div>
-        </section>
-
-        <!-- TAB 5: SERVIÇOS & PRODUTOS -->
-        <section id="tab-servicos" class="hidden space-y-6">
-            <div>
-                <h2 class="text-2xl font-bold text-white">Catálogo de Serviços & Produtos</h2>
-                <p class="text-sm text-gray-400">Preços, durações e taxas de comissão</p>
-            </div>
-
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <!-- Tabela Serviços -->
-                <div class="bg-navy-800 border border-navy-600 rounded-xl p-5">
-                    <h3 class="text-lg font-bold text-white mb-4 flex items-center space-x-2">
-                        <i class="fa-solid fa-scissors text-amber-400"></i>
-                        <span>Serviços Disponíveis</span>
-                    </h3>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left text-sm text-gray-300">
-                            <thead class="bg-navy-700 text-xs uppercase text-gray-400">
+                <div class="card">
+                    <h3 style="margin-bottom: 16px; font-size: 16px;">Agenda do Dia</h3>
+                    <div class="table-container">
+                        <table>
+                            <thead>
                                 <tr>
-                                    <th class="p-3">Serviço</th>
-                                    <th class="p-3 text-center">Duração</th>
-                                    <th class="p-3 text-right">Preço</th>
-                                    <th class="p-3 text-right">Comissão</th>
+                                    <th>Horário</th>
+                                    <th>Cliente</th>
+                                    <th>Barbeiro</th>
+                                    <th>Serviço</th>
+                                    <th>Valor</th>
+                                    <th>Status</th>
+                                    <th>Ações</th>
                                 </tr>
                             </thead>
-                            <tbody id="lista-servicos-tabela" class="divide-y divide-navy-600"></tbody>
+                            <tbody id="today-appointments-table">
+                                <!-- Populated dynamically -->
+                            </tbody>
                         </table>
                     </div>
                 </div>
+            </section>
 
-                <!-- Tabela Produtos -->
-                <div class="bg-navy-800 border border-navy-600 rounded-xl p-5">
-                    <h3 class="text-lg font-bold text-white mb-4 flex items-center space-x-2">
-                        <i class="fa-solid fa-wine-bottle text-emerald-400"></i>
-                        <span>Produtos & Estoque</span>
-                    </h3>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left text-sm text-gray-300">
-                            <thead class="bg-navy-700 text-xs uppercase text-gray-400">
-                                <tr>
-                                    <th class="p-3">Produto</th>
-                                    <th class="p-3 text-center">Estoque</th>
-                                    <th class="p-3 text-right">Custo</th>
-                                    <th class="p-3 text-right">Venda</th>
-                                </tr>
-                            </thead>
-                            <tbody id="lista-produtos-tabela" class="divide-y divide-navy-600"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- TAB 6: FINANCEIRO -->
-        <section id="tab-financeiro" class="hidden space-y-6">
-            <div class="flex items-center justify-between">
-                <div>
-                    <h2 class="text-2xl font-bold text-white">Gestão Financeira & Despesas</h2>
-                    <p class="text-sm text-gray-400">Lançamentos de despesas operacionais e custos fixos</p>
-                </div>
-                <button onclick="openNovaDespesaModal()" class="bg-rose-600 hover:bg-rose-700 text-white font-bold px-4 py-2.5 rounded-lg text-sm flex items-center space-x-2 transition">
-                    <i class="fa-solid fa-plus"></i>
-                    <span>Nova Despesa</span>
-                </button>
-            </div>
-
-            <div class="bg-navy-800 border border-navy-600 rounded-xl overflow-hidden">
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left text-sm text-gray-300">
-                        <thead class="bg-navy-700 text-xs uppercase text-gray-400">
-                            <tr>
-                                <th class="p-4">Categoria</th>
-                                <th class="p-4">Descrição</th>
-                                <th class="p-4 text-center">Tipo</th>
-                                <th class="p-4 text-right">Valor</th>
-                            </tr>
-                        </thead>
-                        <tbody id="lista-despesas" class="divide-y divide-navy-600"></tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
-
-        <!-- TAB 7: CONFIGURAÇÕES & SUPABASE -->
-        <section id="tab-configuracoes" class="hidden space-y-6">
-            <div>
-                <h2 class="text-2xl font-bold text-white">Configurações & Conexão Supabase</h2>
-                <p class="text-sm text-gray-400">Ajustes de credenciais e sincronização com banco de dados</p>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- Supabase Config Form -->
-                <div class="bg-navy-800 border border-navy-600 rounded-xl p-6 space-y-4">
-                    <h3 class="font-bold text-white text-lg flex items-center space-x-2">
-                        <i class="fa-solid fa-database text-emerald-400"></i>
-                        <span>Parâmetros da API Supabase</span>
-                    </h3>
-                    <p class="text-xs text-gray-400">Insira suas chaves do Supabase para sincronização em nuvem em tempo real.</p>
-                    
-                    <div>
-                        <label class="block text-xs font-semibold uppercase text-gray-400 mb-1">SUPABASE URL</label>
-                        <input type="text" id="supabase-url-input" placeholder="https://xyz.supabase.co" class="w-full bg-navy-700 border border-navy-600 rounded-lg p-3 text-sm text-white focus:outline-none focus:border-gold">
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-semibold uppercase text-gray-400 mb-1">SUPABASE ANON KEY</label>
-                        <input type="password" id="supabase-key-input" placeholder="eyJhbGciOi..." class="w-full bg-navy-700 border border-navy-600 rounded-lg p-3 text-sm text-white focus:outline-none focus:border-gold">
-                    </div>
-
-                    <button onclick="salvarConfigSupabase()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-lg text-sm transition flex items-center justify-center space-x-2">
-                        <i class="fa-solid fa-floppy-disk"></i>
-                        <span>Conectar & Salvar Credenciais</span>
-                    </button>
-                </div>
-
-                <!-- Credenciais da Barbearia -->
-                <div class="bg-navy-800 border border-navy-600 rounded-xl p-6 space-y-4">
-                    <h3 class="font-bold text-white text-lg flex items-center space-x-2">
-                        <i class="fa-solid fa-lock text-gold"></i>
-                        <span>Conta do Proprietário</span>
-                    </h3>
-                    <div>
-                        <label class="block text-xs font-semibold uppercase text-gray-400 mb-1">E-mail Cadastrado</label>
-                        <input type="text" value="proprietario@braganca.com" readonly class="w-full bg-navy-900 border border-navy-600 rounded-lg p-3 text-sm text-gray-400">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold uppercase text-gray-400 mb-1">Pergunta de Segurança</label>
-                        <input type="text" value="Braganca" readonly class="w-full bg-navy-900 border border-navy-600 rounded-lg p-3 text-sm text-gray-400">
-                    </div>
-                </div>
-            </div>
-        </section>
-
-    </main>
-
-    <!-- MODAL NOVO ATENDIMENTO -->
-    <div id="modal-atendimento" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
-        <div class="bg-navy-800 border border-navy-600 w-full max-w-lg rounded-xl p-6 space-y-4">
-            <div class="flex justify-between items-center border-b border-navy-600 pb-3">
-                <h3 class="font-bold text-white text-lg">Novo Atendimento</h3>
-                <button onclick="closeModal('modal-atendimento')" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
-            </div>
-
-            <form id="form-atendimento" onsubmit="salvarAtendimento(event)" class="space-y-4">
-                <div>
-                    <label class="block text-xs uppercase font-semibold text-gray-400 mb-1">Cliente</label>
-                    <select id="atend-cliente" required class="w-full bg-navy-700 border border-navy-600 rounded-lg p-3 text-sm text-white"></select>
-                </div>
-
-                <div>
-                    <label class="block text-xs uppercase font-semibold text-gray-400 mb-1">Barbeiro / Profissional</label>
-                    <select id="atend-prof" required class="w-full bg-navy-700 border border-navy-600 rounded-lg p-3 text-sm text-white"></select>
-                </div>
-
-                <div>
-                    <label class="block text-xs uppercase font-semibold text-gray-400 mb-1">Serviço Principal</label>
-                    <select id="atend-servico" required class="w-full bg-navy-700 border border-navy-600 rounded-lg p-3 text-sm text-white"></select>
-                </div>
-
-                <div>
-                    <label class="block text-xs uppercase font-semibold text-gray-400 mb-1">Forma de Pagamento</label>
-                    <select id="atend-pagamento" required class="w-full bg-navy-700 border border-navy-600 rounded-lg p-3 text-sm text-white">
-                        <option value="PIX">PIX</option>
-                        <option value="Dinheiro">Dinheiro</option>
-                        <option value="Cartão de Débito">Cartão de Débito</option>
-                        <option value="Cartão de Crédito">Cartão de Crédito</option>
+            <!-- 2. ATENDIMENTOS VIEW -->
+            <section id="view-appointments" class="view-section">
+                <div class="actions-bar">
+                    <button class="btn btn-primary" onclick="openModal('modal-appointment')">+ Criar Agendamento</button>
+                    <input type="date" id="filter-appt-date" class="form-control" style="width: auto;" onchange="renderAppointments()">
+                    <select id="filter-appt-status" class="form-control" style="width: auto;" onchange="renderAppointments()">
+                        <option value="ALL">Todos os Status</option>
+                        <option value="Agendado">Agendados</option>
+                        <option value="Concluído">Concluídos</option>
+                        <option value="Cancelado">Cancelados</option>
                     </select>
                 </div>
 
-                <div class="pt-2 flex justify-end space-x-3">
-                    <button type="button" onclick="closeModal('modal-atendimento')" class="px-4 py-2 bg-navy-700 text-gray-300 rounded-lg text-sm hover:bg-navy-600">Cancelar</button>
-                    <button type="submit" class="px-5 py-2 bg-gold text-navy-900 font-bold rounded-lg text-sm hover:bg-gold-hover">Finalizar Atendimento</button>
+                <div class="card">
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Data / Hora</th>
+                                    <th>Cliente</th>
+                                    <th>Barbeiro</th>
+                                    <th>Serviço</th>
+                                    <th>Pagamento</th>
+                                    <th>Valor Total</th>
+                                    <th>Status</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="appointments-table-body">
+                                <!-- Dynamic -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 3. CLIENTES VIEW -->
+            <section id="view-clients" class="view-section">
+                <div class="metrics-grid">
+                    <div class="card metric-card">
+                        <span class="metric-title">Total Cadastrados</span>
+                        <span class="metric-value" id="kpi-total-clients">0</span>
+                    </div>
+                    <div class="card metric-card">
+                        <span class="metric-title">Clubes Ativos</span>
+                        <span class="metric-value highlight-gold" id="kpi-clubs-count">0</span>
+                    </div>
+                    <div class="card metric-card">
+                        <span class="metric-title">Recorrência Mensal (MRR)</span>
+                        <span class="metric-value highlight-teal" id="kpi-mrr-value">R$ 0,00</span>
+                    </div>
+                </div>
+
+                <div class="actions-bar">
+                    <button class="btn btn-primary" onclick="openModal('modal-client')">+ Cadastrar Cliente</button>
+                    <input type="text" id="search-client" class="form-control" placeholder="Buscar por nome ou telefone..." style="flex: 1; max-width: 320px;" oninput="renderClients()">
+                </div>
+
+                <div class="card">
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Nome</th>
+                                    <th>WhatsApp</th>
+                                    <th>Clube de Assinatura</th>
+                                    <th>Mensalidade</th>
+                                    <th>Atendimentos</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="clients-table-body">
+                                <!-- Dynamic -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 4. SERVIÇOS VIEW -->
+            <section id="view-services" class="view-section">
+                <div class="actions-bar">
+                    <button class="btn btn-primary" onclick="openModal('modal-service')">+ Adicionar Serviço</button>
+                </div>
+                <div class="card">
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Nome do Serviço</th>
+                                    <th>Duração (min)</th>
+                                    <th>Preço Avulso</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="services-table-body">
+                                <!-- Dynamic -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 5. PRODUTOS VIEW -->
+            <section id="view-products" class="view-section">
+                <div class="actions-bar">
+                    <button class="btn btn-primary" onclick="openModal('modal-product')">+ Adicionar Produto</button>
+                </div>
+                <div class="card">
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Produto</th>
+                                    <th>Estoque</th>
+                                    <th>Preço Custo</th>
+                                    <th>Preço Venda</th>
+                                    <th>Lucro Unitário</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="products-table-body">
+                                <!-- Dynamic -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 6. BARBEIROS VIEW -->
+            <section id="view-barbers" class="view-section">
+                <div class="actions-bar">
+                    <button class="btn btn-primary" onclick="openModal('modal-barber')">+ Novo Barbeiro</button>
+                </div>
+                <div class="card">
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Nome do Profissional</th>
+                                    <th>Telefone</th>
+                                    <th>Comissão (%)</th>
+                                    <th>Status</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="barbers-table-body">
+                                <!-- Dynamic -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 7. FINANCEIRO VIEW -->
+            <section id="view-finance" class="view-section">
+                <div class="metrics-grid">
+                    <div class="card metric-card">
+                        <span class="metric-title">Faturamento Total</span>
+                        <span class="metric-value highlight-teal" id="fin-total-rev">R$ 0,00</span>
+                    </div>
+                    <div class="card metric-card">
+                        <span class="metric-title">Despesas Totais</span>
+                        <span class="metric-value" style="color: var(--danger-red);" id="fin-total-exp">R$ 0,00</span>
+                    </div>
+                    <div class="card metric-card">
+                        <span class="metric-title">Lucro Líquido</span>
+                        <span class="metric-value highlight-gold" id="fin-net-profit">R$ 0,00</span>
+                    </div>
+                </div>
+
+                <div class="actions-bar">
+                    <button class="btn btn-primary" onclick="openModal('modal-expense')">+ Nova Despesa</button>
+                </div>
+
+                <div class="card">
+                    <h3 style="margin-bottom: 16px;">Registro de Despesas</h3>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Descrição</th>
+                                    <th>Categoria</th>
+                                    <th>Valor</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="expenses-table-body">
+                                <!-- Dynamic -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 8. CONFIGURAÇÕES VIEW -->
+            <section id="view-settings" class="view-section">
+                <div class="card" style="margin-bottom: 24px;">
+                    <h3 style="margin-bottom: 12px; color: var(--purple-supabase);">☁️ Conexão de Dados em Nuvem (Supabase)</h3>
+                    <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;">
+                        Com o Supabase ativado, qualquer alteração que você fizer neste computador ou celular irá aparecer automaticamente em todos os outros navegadores conectados.
+                    </p>
+                    <div class="actions-bar">
+                        <button class="btn btn-supabase" onclick="openModal('modal-supabase-config')">Configurar URL e Chave Supabase</button>
+                        <button class="btn btn-outline" onclick="openModal('modal-sql-script')">📜 Ver Script SQL para Criar Tabelas</button>
+                    </div>
+                </div>
+
+                <div class="card" style="margin-bottom: 24px;">
+                    <h3 style="margin-bottom: 16px;">Metas de Faturamento</h3>
+                    <div class="form-group">
+                        <label>Meta Mínima (R$)</label>
+                        <input type="number" id="setting-goal-min" class="form-control" value="18250">
+                    </div>
+                    <div class="form-group">
+                        <label>Meta Média (Alvo) (R$)</label>
+                        <input type="number" id="setting-goal-med" class="form-control" value="20000">
+                    </div>
+                    <div class="form-group">
+                        <label>Meta Alta (R$)</label>
+                        <input type="number" id="setting-goal-high" class="form-control" value="25000">
+                    </div>
+                    <button class="btn btn-primary" onclick="saveGoalSettings()">Salvar Configurações de Metas</button>
+                </div>
+
+                <div class="card">
+                    <h3 style="margin-bottom: 16px;">Backup & Restauração Local (JSON)</h3>
+                    <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;">
+                        Exporte todos os dados para um arquivo JSON ou restaure um backup existente.
+                    </p>
+                    <div class="actions-bar">
+                        <button class="btn btn-success" onclick="exportDataJSON()">Exportar Arquivo JSON</button>
+                        <button class="btn btn-outline" onclick="document.getElementById('import-file-input').click()">Importar Arquivo JSON</button>
+                        <input type="file" id="import-file-input" style="display: none;" accept=".json" onchange="importDataJSON(event)">
+                        <button class="btn btn-danger" onclick="resetToSeedData()">Resetar para Dados Iniciais</button>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+    </div>
+
+    <!-- MODAL CONFIGURAR SUPABASE -->
+    <div id="modal-supabase-config" class="modal-backdrop">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 style="color: var(--purple-supabase);">☁️ Conectar Projeto Supabase</h3>
+                <button class="close-btn" onclick="closeModal('modal-supabase-config')">&times;</button>
+            </div>
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
+                Crie um projeto gratuito em <strong>supabase.com</strong>, obtenha a URL do projeto e a chave anon public, e cole abaixo para habilitar a sincronização em nuvem entre todos os seus dispositivos.
+            </p>
+            <form onsubmit="saveSupabaseCredentials(event)">
+                <div class="form-group">
+                    <label>Project URL (Ex: https://xyzcompany.supabase.co)</label>
+                    <input type="text" id="supa-url-input" class="form-control" placeholder="https://xyz.supabase.co" required>
+                </div>
+                <div class="form-group">
+                    <label>Anon Public Key (Ex: eyJhbGciOiJKV1QiLC...)</label>
+                    <input type="text" id="supa-key-input" class="form-control" placeholder="eyJhbG..." required>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px;">
+                    <button type="button" class="btn btn-outline" onclick="openModal('modal-sql-script')">Script SQL</button>
+                    <div style="display: flex; gap: 10px;">
+                        <button type="button" class="btn btn-outline" onclick="disconnectSupabase()">Desconectar</button>
+                        <button type="submit" class="btn btn-supabase">Salvar & Testar Conexão</button>
+                    </div>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- SCRIPT DA APLICAÇÃO -->
+    <!-- MODAL SCRIPT SQL -->
+    <div id="modal-sql-script" class="modal-backdrop">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>📜 Script SQL para Criar Tabelas no Supabase</h3>
+                <button class="close-btn" onclick="closeModal('modal-sql-script')">&times;</button>
+            </div>
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">
+                Cole o código abaixo no <strong>SQL Editor</strong> do seu painel Supabase para criar automaticamente as tabelas do sistema:
+            </p>
+            <pre id="sql-script-text">-- SCRIPT DE CRIAÇÃO DAS TABELAS DA BARBEARIA BRAGANÇA
+CREATE TABLE IF NOT EXISTS clients (
+    id BIGINT PRIMARY KEY,
+    name TEXT,
+    phone TEXT,
+    plan_name TEXT,
+    plan_value NUMERIC,
+    plan_active BOOLEAN,
+    total_services INT
+);
+
+CREATE TABLE IF NOT EXISTS services (
+    id BIGINT PRIMARY KEY,
+    name TEXT,
+    price NUMERIC,
+    duration INT
+);
+
+CREATE TABLE IF NOT EXISTS products (
+    id BIGINT PRIMARY KEY,
+    name TEXT,
+    stock INT,
+    cost NUMERIC,
+    price NUMERIC
+);
+
+CREATE TABLE IF NOT EXISTS barbers (
+    id BIGINT PRIMARY KEY,
+    name TEXT,
+    phone TEXT,
+    commission INT,
+    is_active BOOLEAN
+);
+
+CREATE TABLE IF NOT EXISTS appointments (
+    id BIGINT PRIMARY KEY,
+    client_id BIGINT,
+    client_name TEXT,
+    barber_id BIGINT,
+    barber_name TEXT,
+    service_id BIGINT,
+    service_name TEXT,
+    date TEXT,
+    time TEXT,
+    payment_method TEXT,
+    total_value NUMERIC,
+    status TEXT
+);
+
+CREATE TABLE IF NOT EXISTS expenses (
+    id BIGINT PRIMARY KEY,
+    description TEXT,
+    category TEXT,
+    amount NUMERIC,
+    date TEXT
+);
+
+-- DESABILITAR RLS PARA PERMITIR ACESSO DIRETO VIA CLIENT
+ALTER TABLE clients DISABLE ROW LEVEL SECURITY;
+ALTER TABLE services DISABLE ROW LEVEL SECURITY;
+ALTER TABLE products DISABLE ROW LEVEL SECURITY;
+ALTER TABLE barbers DISABLE ROW LEVEL SECURITY;
+ALTER TABLE appointments DISABLE ROW LEVEL SECURITY;
+ALTER TABLE expenses DISABLE ROW LEVEL SECURITY;</pre>
+            <div style="display: flex; justify-content: flex-end; margin-top: 16px;">
+                <button class="btn btn-primary" onclick="copySQLScript()">Copiar Script SQL</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL AGENDAMENTO -->
+    <div id="modal-appointment" class="modal-backdrop">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>Novo Agendamento</h3>
+                <button class="close-btn" onclick="closeModal('modal-appointment')">&times;</button>
+            </div>
+            <form onsubmit="saveAppointment(event)">
+                <div class="form-group">
+                    <label>Cliente</label>
+                    <select id="appt-client-id" class="form-control" required></select>
+                </div>
+                <div class="form-group">
+                    <label>Barbeiro</label>
+                    <select id="appt-barber-id" class="form-control" required></select>
+                </div>
+                <div class="form-group">
+                    <label>Serviço</label>
+                    <select id="appt-service-id" class="form-control" required></select>
+                </div>
+                <div class="form-group">
+                    <label>Data</label>
+                    <input type="date" id="appt-date" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Horário</label>
+                    <input type="time" id="appt-time" class="form-control" required value="10:00">
+                </div>
+                <div class="form-group">
+                    <label>Forma de Pagamento</label>
+                    <select id="appt-payment" class="form-control">
+                        <option value="Pix">Pix</option>
+                        <option value="Dinheiro">Dinheiro</option>
+                        <option value="Cartão de Crédito">Cartão de Crédito</option>
+                        <option value="Cartão de Débito">Cartão de Débito</option>
+                        <option value="Plano/Clube">Plano / Clube de Assinatura</option>
+                    </select>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                    <button type="button" class="btn btn-outline" onclick="closeModal('modal-appointment')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar Agendamento</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL CLIENTE -->
+    <div id="modal-client" class="modal-backdrop">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>Cadastrar Cliente</h3>
+                <button class="close-btn" onclick="closeModal('modal-client')">&times;</button>
+            </div>
+            <form onsubmit="saveClient(event)">
+                <div class="form-group">
+                    <label>Nome do Cliente</label>
+                    <input type="text" id="cli-name" class="form-control" required placeholder="Ex: Carlos Silva">
+                </div>
+                <div class="form-group">
+                    <label>WhatsApp / Celular</label>
+                    <input type="text" id="cli-phone" class="form-control" placeholder="(11) 99999-9999">
+                </div>
+                <div class="form-group">
+                    <label>Clube de Assinatura</label>
+                    <select id="cli-plan" class="form-control" onchange="updatePlanValueField()">
+                        <option value="Nenhum|0">Sem Assinatura (Avulso)</option>
+                        <option value="Plano Essencial|70">Plano Essencial - Só Corte (R$ 70,00)</option>
+                        <option value="Plano Executivo|130">Plano Executivo - Corte + Barba (R$ 130,00)</option>
+                        <option value="Plano VIP Bragança|180">Plano VIP Bragança (R$ 180,00)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Valor da Mensalidade (R$)</label>
+                    <input type="number" step="0.01" id="cli-plan-val" class="form-control" value="0">
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                    <button type="button" class="btn btn-outline" onclick="closeModal('modal-client')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar Cliente</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL SERVIÇO -->
+    <div id="modal-service" class="modal-backdrop">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>Novo Serviço</h3>
+                <button class="close-btn" onclick="closeModal('modal-service')">&times;</button>
+            </div>
+            <form onsubmit="saveService(event)">
+                <div class="form-group">
+                    <label>Nome do Serviço</label>
+                    <input type="text" id="srv-name" class="form-control" required placeholder="Ex: Corte de Cabelo">
+                </div>
+                <div class="form-group">
+                    <label>Preço (R$)</label>
+                    <input type="number" step="0.01" id="srv-price" class="form-control" required placeholder="40.00">
+                </div>
+                <div class="form-group">
+                    <label>Duração (Minutos)</label>
+                    <input type="number" id="srv-duration" class="form-control" required value="30">
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                    <button type="button" class="btn btn-outline" onclick="closeModal('modal-service')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar Serviço</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL PRODUTO -->
+    <div id="modal-product" class="modal-backdrop">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>Novo Produto</h3>
+                <button class="close-btn" onclick="closeModal('modal-product')">&times;</button>
+            </div>
+            <form onsubmit="saveProduct(event)">
+                <div class="form-group">
+                    <label>Nome do Produto</label>
+                    <input type="text" id="prd-name" class="form-control" required placeholder="Ex: Pomada Modeladora">
+                </div>
+                <div class="form-group">
+                    <label>Quantidade em Estoque</label>
+                    <input type="number" id="prd-stock" class="form-control" required value="10">
+                </div>
+                <div class="form-group">
+                    <label>Preço Custo (R$)</label>
+                    <input type="number" step="0.01" id="prd-cost" class="form-control" required placeholder="15.00">
+                </div>
+                <div class="form-group">
+                    <label>Preço Venda (R$)</label>
+                    <input type="number" step="0.01" id="prd-price" class="form-control" required placeholder="35.00">
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                    <button type="button" class="btn btn-outline" onclick="closeModal('modal-product')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar Produto</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL BARBEIRO -->
+    <div id="modal-barber" class="modal-backdrop">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>Novo Barbeiro</h3>
+                <button class="close-btn" onclick="closeModal('modal-barber')">&times;</button>
+            </div>
+            <form onsubmit="saveBarber(event)">
+                <div class="form-group">
+                    <label>Nome do Barbeiro</label>
+                    <input type="text" id="bar-name" class="form-control" required placeholder="Ex: Marcos Souza">
+                </div>
+                <div class="form-group">
+                    <label>Telefone</label>
+                    <input type="text" id="bar-phone" class="form-control" placeholder="(11) 98888-8888">
+                </div>
+                <div class="form-group">
+                    <label>Porcentagem de Comissão (%)</label>
+                    <input type="number" id="bar-comm" class="form-control" required value="50">
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                    <button type="button" class="btn btn-outline" onclick="closeModal('modal-barber')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar Barbeiro</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL DESPESA -->
+    <div id="modal-expense" class="modal-backdrop">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>Lançar Despesa</h3>
+                <button class="close-btn" onclick="closeModal('modal-expense')">&times;</button>
+            </div>
+            <form onsubmit="saveExpense(event)">
+                <div class="form-group">
+                    <label>Descrição</label>
+                    <input type="text" id="exp-desc" class="form-control" required placeholder="Ex: Conta de Luz / Produtos">
+                </div>
+                <div class="form-group">
+                    <label>Categoria</label>
+                    <select id="exp-cat" class="form-control">
+                        <option value="Produtos">Produtos / Insumos</option>
+                        <option value="Aluguel">Aluguel</option>
+                        <option value="Água/Luz/Internet">Água / Luz / Internet</option>
+                        <option value="Comissões">Comissões</option>
+                        <option value="Outros">Outros</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Valor (R$)</label>
+                    <input type="number" step="0.01" id="exp-amount" class="form-control" required placeholder="150.00">
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                    <button type="button" class="btn btn-outline" onclick="closeModal('modal-expense')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar Despesa</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT APP LOGIC & SUPABASE INTEGRATION -->
     <script>
-        // --- 1. DADOS INICIAIS DA BARBEARIA BRAGANÇA ---
-        const initialData = {
-            servicos: [
-                { id: 1, name: "Corte", price: 40.0, durationMinutes: 30, commissionPercentage: 45.0 },
-                { id: 2, name: "Barba", price: 40.0, durationMinutes: 25, commissionPercentage: 45.0 },
-                { id: 3, name: "Sobrancelha", price: 10.0, durationMinutes: 5, commissionPercentage: 45.0 },
-                { id: 4, name: "Pezinho", price: 20.0, durationMinutes: 10, commissionPercentage: 45.0 },
-                { id: 5, name: "Free Style", price: 5.0, durationMinutes: 5, commissionPercentage: 45.0 },
-                { id: 6, name: "Pigmentação", price: 30.0, durationMinutes: 20, commissionPercentage: 45.0 },
-                { id: 7, name: "Camuflagem", price: 40.0, durationMinutes: 20, commissionPercentage: 45.0 },
-                { id: 8, name: "Nevou", price: 100.0, durationMinutes: 90, commissionPercentage: 45.0 }
+        // --- SEED / INITIAL STORAGE DATA ---
+        const initialSeed = {
+            clients: [
+                { id: 1, name: "Lucas Almeida", phone: "(11) 99823-4411", planName: "Plano Executivo", planValue: 130.00, planActive: true, totalServices: 8 },
+                { id: 2, name: "Mateus Ferreira", phone: "(11) 98711-2233", planName: "Plano VIP Bragança", planValue: 180.00, planActive: true, totalServices: 12 },
+                { id: 3, name: "Gabriel Santos", phone: "(11) 97122-8899", planName: "Nenhum", planValue: 0, planActive: false, totalServices: 3 },
+                { id: 4, name: "Rodrigo Oliveira", phone: "(11) 99655-1122", planName: "Plano Essencial", planValue: 70.00, planActive: true, totalServices: 5 }
             ],
-            produtos: [
-                { id: 1, name: "Cerveja Heineken", category: "Bebidas", stock: 60, cost: 6.0, price: 12.0 },
-                { id: 2, name: "Refrigerante Lata", category: "Bebidas", stock: 45, cost: 2.5, price: 6.0 },
-                { id: 3, name: "Pomada Modeladora Matte", category: "Cabelo e barba", stock: 22, cost: 15.0, price: 35.0 },
-                { id: 4, name: "Óleo Hidratante Barba", category: "Cabelo e barba", stock: 18, cost: 12.0, price: 30.0 },
-                { id: 5, name: "Colônia Bragança", category: "Perfumes", stock: 8, cost: 35.0, price: 85.0 }
+            services: [
+                { id: 1, name: "Corte de Cabelo (Corte Social / Fade)", price: 45.00, duration: 30 },
+                { id: 2, name: "Barba Completa com Toalha Quente", price: 35.00, duration: 30 },
+                { id: 3, name: "Combo Corte + Barba", price: 75.00, duration: 50 },
+                { id: 4, name: "Sobrancelha Navalhada", price: 15.00, duration: 15 },
+                { id: 5, name: "Selagem / Pigmentação", price: 60.00, duration: 45 }
             ],
-            profissionais: [
-                { id: 1, name: "Gabriel Borges Grave Bragança", role: "Fundador", serviceCommissionPercentage: 45.0, productSalesGoal: 500.0 },
-                { id: 2, name: "Luccas", role: "Barbeiro", serviceCommissionPercentage: 45.0, productSalesGoal: 500.0 }
+            products: [
+                { id: 1, name: "Pomada Modeladora Matte 150g", stock: 18, cost: 14.00, price: 35.00 },
+                { id: 2, name: "Óleo para Barba Bragança Premium 30ml", stock: 12, cost: 18.00, price: 42.00 },
+                { id: 3, name: "Shampoo Fortificante Masculino 250ml", stock: 9, cost: 15.00, price: 38.00 }
             ],
-            clientes: [
-                { id: 1, name: "Carlos Silva", phone: "(51) 98123-4567", totalServices: 6, clubPlan: true },
-                { id: 2, name: "Pedro Bragança", phone: "(51) 99876-5432", totalServices: 12, clubPlan: true },
-                { id: 3, name: "Andrei Souza", phone: "(51) 99111-2233", totalServices: 3, clubPlan: false },
-                { id: 4, name: "Lucas Rezende", phone: "(51) 98844-5566", totalServices: 5, clubPlan: false }
+            barbers: [
+                { id: 1, name: "Barbeiro Mestre Bragança", phone: "(11) 99000-0001", commission: 60, isActive: true },
+                { id: 2, name: "Eduardo Ribeiro", phone: "(11) 99000-0002", commission: 50, isActive: true },
+                { id: 3, name: "Felipe Costa", phone: "(11) 99000-0003", commission: 50, isActive: true }
             ],
-            atendimentos: [
-                { id: 101, clientName: "Carlos Silva", professionalName: "Gabriel Borges Grave Bragança", totalValue: 80.0, commissionValue: 36.0, paymentMethod: "PIX", date: "2026-07-28 14:30" },
-                { id: 102, clientName: "Pedro Bragança", professionalName: "Luccas", totalValue: 40.0, commissionValue: 18.0, paymentMethod: "Dinheiro", date: "2026-07-28 15:15" },
-                { id: 103, clientName: "Andrei Souza", professionalName: "Gabriel Borges Grave Bragança", totalValue: 120.0, commissionValue: 54.0, paymentMethod: "Cartão de Crédito", date: "2026-07-28 16:00" }
+            appointments: [],
+            expenses: [
+                { id: 1, description: "Compra de Lâminas e Toalhas", category: "Produtos", amount: 240.00, date: new Date().toISOString().split('T')[0] }
             ],
-            despesas: [
-                { id: 1, category: "Aluguel", description: "Ponto Comercial", value: 1311.0, isFixed: true },
-                { id: 2, category: "Energia", description: "Neoenergia Luz", value: 800.0, isFixed: true },
-                { id: 3, category: "Marketing", description: "Tráfego Pago & Meta ADS", value: 350.0, isFixed: true },
-                { id: 4, category: "Software", description: "BarberCode Sistema", value: 120.0, isFixed: true }
-            ]
+            goal: { min: 18250, med: 20000, high: 25000 }
         };
 
-        // Local Storage / Cache
-        let store = JSON.parse(localStorage.getItem('braganca_store')) || initialData;
-        function saveStore() { localStorage.setItem('braganca_store', JSON.stringify(store)); }
+        const todayStr = new Date().toISOString().split('T')[0];
+        initialSeed.appointments = [
+            { id: 101, clientId: 1, clientName: "Lucas Almeida", barberId: 1, barberName: "Barbeiro Mestre Bragança", serviceId: 3, serviceName: "Combo Corte + Barba", date: todayStr, time: "09:00", paymentMethod: "Plano/Clube", totalValue: 75.00, status: "Concluído" },
+            { id: 102, clientId: 2, clientName: "Mateus Ferreira", barberId: 2, barberName: "Eduardo Ribeiro", serviceId: 1, serviceName: "Corte de Cabelo (Corte Social / Fade)", date: todayStr, time: "10:30", paymentMethod: "Pix", totalValue: 45.00, status: "Agendado" },
+            { id: 103, clientId: 3, clientName: "Gabriel Santos", barberId: 1, barberName: "Barbeiro Mestre Bragança", serviceId: 2, serviceName: "Barba Completa com Toalha Quente", date: todayStr, time: "14:00", paymentMethod: "Dinheiro", totalValue: 35.00, status: "Agendado" }
+        ];
 
-        // Supabase Client Setup
+        // --- SUPABASE CLIENT & CLOUD SYNC ---
         let supabaseClient = null;
+        let isCloudConnected = false;
+
         function initSupabase() {
-            const url = window.ENV_SUPABASE_URL || localStorage.getItem('SUPABASE_URL') || '';
-            const key = window.ENV_SUPABASE_KEY || localStorage.getItem('SUPABASE_KEY') || '';
+            const url = localStorage.getItem('supa_url');
+            const key = localStorage.getItem('supa_key');
 
             if (url && key && window.supabase) {
                 try {
                     supabaseClient = window.supabase.createClient(url, key);
-                    document.getElementById('db-status-badge').className = "px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30";
-                    document.getElementById('db-status-badge').innerHTML = '<i class="fa-solid fa-cloud mr-1"></i> Supabase Conectado';
-                    document.getElementById('supabase-url-input').value = url;
-                    document.getElementById('supabase-key-input').value = key;
-                } catch (e) {
-                    console.error("Erro ao inicializar Supabase:", e);
+                    isCloudConnected = true;
+                    updateSyncUIStatus(true, "Supabase Nuvem Ativo");
+                    document.getElementById('banner-connect-supabase').style.display = 'none';
+                    syncFromSupabase();
+                } catch (err) {
+                    console.error("Erro ao inicializar Supabase:", err);
+                    updateSyncUIStatus(false, "Falha na conexão Supabase");
                 }
+            } else {
+                updateSyncUIStatus(false, "Modo LocalStorage (Offline)");
+                document.getElementById('banner-connect-supabase').style.display = 'flex';
             }
         }
 
-        // --- 2. NAVEGAÇÃO ENTRE ABAS ---
+        function updateSyncUIStatus(online, text) {
+            const dot = document.getElementById('sync-dot');
+            const label = document.getElementById('sync-status-text');
+            if (online) {
+                dot.className = "status-dot online";
+                label.innerText = text || "Nuvem Conectada";
+            } else {
+                dot.className = "status-dot offline";
+                label.innerText = text || "Conectar Nuvem (Supabase)";
+            }
+        }
+
+        async function syncFromSupabase() {
+            if (!supabaseClient) return;
+
+            try {
+                const [cliRes, srvRes, prdRes, barRes, appRes, expRes] = await Promise.all([
+                    supabaseClient.from('clients').select('*'),
+                    supabaseClient.from('services').select('*'),
+                    supabaseClient.from('products').select('*'),
+                    supabaseClient.from('barbers').select('*'),
+                    supabaseClient.from('appointments').select('*'),
+                    supabaseClient.from('expenses').select('*')
+                ]);
+
+                const db = getDB();
+
+                if (!cliRes.error && cliRes.data) {
+                    db.clients = cliRes.data.map(c => ({
+                        id: c.id, name: c.name, phone: c.phone,
+                        planName: c.plan_name, planValue: Number(c.plan_value),
+                        planActive: c.plan_active, totalServices: c.total_services
+                    }));
+                }
+
+                if (!srvRes.error && srvRes.data) {
+                    db.services = srvRes.data.map(s => ({
+                        id: s.id, name: s.name, price: Number(s.price), duration: s.duration
+                    }));
+                }
+
+                if (!prdRes.error && prdRes.data) {
+                    db.products = prdRes.data.map(p => ({
+                        id: p.id, name: p.name, stock: p.stock, cost: Number(p.cost), price: Number(p.price)
+                    }));
+                }
+
+                if (!barRes.error && barRes.data) {
+                    db.barbers = barRes.data.map(b => ({
+                        id: b.id, name: b.name, phone: b.phone, commission: b.commission, isActive: b.is_active
+                    }));
+                }
+
+                if (!appRes.error && appRes.data) {
+                    db.appointments = appRes.data.map(a => ({
+                        id: a.id, clientId: a.client_id, clientName: a.client_name,
+                        barberId: a.barber_id, barberName: a.barber_name,
+                        serviceId: a.service_id, serviceName: a.service_name,
+                        date: a.date, time: a.time, paymentMethod: a.payment_method,
+                        totalValue: Number(a.total_value), status: a.status
+                    }));
+                }
+
+                if (!expRes.error && expRes.data) {
+                    db.expenses = expRes.data.map(e => ({
+                        id: e.id, description: e.description, category: e.category,
+                        amount: Number(e.amount), date: e.date
+                    }));
+                }
+
+                localStorage.setItem('barbearia_braganca_db', JSON.stringify(db));
+                refreshCurrentTab();
+            } catch (e) {
+                console.warn("Erro sincronizando do Supabase (Usando cache local):", e);
+            }
+        }
+
+        async function syncRecordToSupabase(table, record) {
+            if (!supabaseClient) return;
+            try {
+                let supaRecord = {};
+                if (table === 'clients') {
+                    supaRecord = { id: record.id, name: record.name, phone: record.phone, plan_name: record.planName, plan_value: record.planValue, plan_active: record.planActive, total_services: record.totalServices };
+                } else if (table === 'services') {
+                    supaRecord = { id: record.id, name: record.name, price: record.price, duration: record.duration };
+                } else if (table === 'products') {
+                    supaRecord = { id: record.id, name: record.name, stock: record.stock, cost: record.cost, price: record.price };
+                } else if (table === 'barbers') {
+                    supaRecord = { id: record.id, name: record.name, phone: record.phone, commission: record.commission, is_active: record.isActive };
+                } else if (table === 'appointments') {
+                    supaRecord = { id: record.id, client_id: record.clientId, client_name: record.clientName, barber_id: record.barberId, barber_name: record.barberName, service_id: record.serviceId, service_name: record.serviceName, date: record.date, time: record.time, payment_method: record.paymentMethod, total_value: record.totalValue, status: record.status };
+                } else if (table === 'expenses') {
+                    supaRecord = { id: record.id, description: record.description, category: record.category, amount: record.amount, date: record.date };
+                }
+
+                await supabaseClient.from(table).upsert([supaRecord]);
+            } catch (e) {
+                console.error("Erro ao salvar no Supabase:", e);
+            }
+        }
+
+        async function deleteRecordFromSupabase(table, id) {
+            if (!supabaseClient) return;
+            try {
+                await supabaseClient.from(table).delete().eq('id', id);
+            } catch (e) {
+                console.error("Erro ao deletar do Supabase:", e);
+            }
+        }
+
+        function saveSupabaseCredentials(e) {
+            e.preventDefault();
+            const url = document.getElementById('supa-url-input').value.trim();
+            const key = document.getElementById('supa-key-input').value.trim();
+
+            if (!url || !key) {
+                alert("Por favor insira a URL e a chave válida do Supabase.");
+                return;
+            }
+
+            localStorage.setItem('supa_url', url);
+            localStorage.setItem('supa_key', key);
+
+            closeModal('modal-supabase-config');
+            initSupabase();
+            alert("Credenciais salvas! Conectando ao Supabase...");
+        }
+
+        function disconnectSupabase() {
+            localStorage.removeItem('supa_url');
+            localStorage.removeItem('supa_key');
+            supabaseClient = null;
+            isCloudConnected = false;
+            updateSyncUIStatus(false, "Modo LocalStorage (Offline)");
+            closeModal('modal-supabase-config');
+            document.getElementById('banner-connect-supabase').style.display = 'flex';
+            alert("Supabase desconectado. O sistema continuará salvando localmente.");
+        }
+
+        function manualSyncWithCloud() {
+            if (supabaseClient) {
+                syncFromSupabase();
+                alert("Sincronizando dados com a nuvem Supabase...");
+            } else {
+                openModal('modal-supabase-config');
+            }
+        }
+
+        function copySQLScript() {
+            const text = document.getElementById('sql-script-text').innerText;
+            navigator.clipboard.writeText(text);
+            alert("Script SQL copiado para a área de transferência! Cole no SQL Editor do Supabase.");
+        }
+
+        // --- LOCAL STORAGE DATA CONTROLLER ---
+        function getDB() {
+            const data = localStorage.getItem('barbearia_braganca_db');
+            if (!data) {
+                localStorage.setItem('barbearia_braganca_db', JSON.stringify(initialSeed));
+                return initialSeed;
+            }
+            return JSON.parse(data);
+        }
+
+        function saveDB(db) {
+            localStorage.setItem('barbearia_braganca_db', JSON.stringify(db));
+            refreshCurrentTab();
+        }
+
+        // --- NAVIGATION CONTROLLER ---
+        let currentTab = 'dashboard';
+
         function switchTab(tabId) {
-            document.querySelectorAll('section[id^="tab-"]').forEach(sec => sec.classList.add('hidden'));
-            document.querySelectorAll('.nav-btn').forEach(btn => {
-                btn.className = "nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-navy-700 transition";
-            });
+            currentTab = tabId;
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
 
-            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
-            const activeNav = document.getElementById(`nav-${tabId}`);
-            if (activeNav) {
-                activeNav.className = "nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium text-white bg-navy-700 border-l-4 border-gold transition";
-            }
+            const activeNav = Array.from(document.querySelectorAll('.nav-item')).find(el => el.getAttribute('onclick')?.includes(tabId));
+            if (activeNav) activeNav.classList.add('active');
 
-            if (tabId === 'dashboard') renderCharts();
-        }
+            const activeView = document.getElementById(`view-${tabId}`);
+            if (activeView) activeView.classList.add('active');
 
-        // --- 3. RENDERIZAÇÃO DE TABELAS E COMPONENTES ---
-        function renderAll() {
-            // Atendimentos
-            const listaAtend = document.getElementById('lista-atendimentos');
-            listaAtend.innerHTML = store.atendimentos.map(a => `
-                <tr class="hover:bg-navy-700/50">
-                    <td class="p-4 text-xs font-mono text-gray-400">${a.date}</td>
-                    <td class="p-4 font-semibold text-white">${a.clientName}</td>
-                    <td class="p-4 text-gray-300">${a.professionalName}</td>
-                    <td class="p-4"><span class="px-2 py-1 rounded text-xs bg-navy-900 border border-navy-600">${a.paymentMethod}</span></td>
-                    <td class="p-4 text-right text-purple-400">R$ ${a.commissionValue.toFixed(2)}</td>
-                    <td class="p-4 text-right font-bold text-emerald-400">R$ ${a.totalValue.toFixed(2)}</td>
-                    <td class="p-4 text-center">
-                        <button onclick="deletarAtendimento(${a.id})" class="text-rose-400 hover:text-rose-300"><i class="fa-solid fa-trash-can"></i></button>
-                    </td>
-                </tr>
-            `).join('');
-
-            // Clientes
-            const listaClientes = document.getElementById('lista-clientes');
-            listaClientes.innerHTML = store.clientes.map(c => `
-                <tr class="hover:bg-navy-700/50">
-                    <td class="p-4 font-semibold text-white">${c.name}</td>
-                    <td class="p-4 text-gray-400">${c.phone}</td>
-                    <td class="p-4 text-center font-mono">${c.totalServices}</td>
-                    <td class="p-4">${c.clubPlan ? '<span class="px-2 py-0.5 rounded-full text-xs bg-gold/20 text-gold border border-gold/30"><i class="fa-solid fa-star mr-1"></i>Membro Clube</span>' : '<span class="text-xs text-gray-500">Padrão</span>'}</td>
-                    <td class="p-4 text-right">
-                        <button onclick="deletarCliente(${c.id})" class="text-rose-400 hover:text-rose-300"><i class="fa-solid fa-user-minus"></i></button>
-                    </td>
-                </tr>
-            `).join('');
-
-            // Profissionais
-            const listaProfs = document.getElementById('lista-profissionais');
-            listaProfs.innerHTML = store.profissionais.map(p => `
-                <div class="bg-navy-800 border border-navy-600 rounded-xl p-5 space-y-3">
-                    <div class="flex justify-between items-center">
-                        <div>
-                            <h4 class="font-bold text-white text-base">${p.name}</h4>
-                            <span class="text-xs text-gold">${p.role}</span>
-                        </div>
-                        <div class="w-10 h-10 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center font-bold">
-                            <i class="fa-solid fa-user-ninja"></i>
-                        </div>
-                    </div>
-                    <div class="pt-3 border-t border-navy-600 text-xs space-y-1 text-gray-300">
-                        <div class="flex justify-between"><span>Comissão Serviços:</span><strong class="text-white">${p.serviceCommissionPercentage}%</strong></div>
-                        <div class="flex justify-between"><span>Meta Venda Produtos:</span><strong class="text-emerald-400">R$ ${p.productSalesGoal.toFixed(2)}</strong></div>
-                    </div>
-                </div>
-            `).join('');
-
-            // Serviços
-            document.getElementById('lista-servicos-tabela').innerHTML = store.servicos.map(s => `
-                <tr>
-                    <td class="p-3 font-medium text-white">${s.name}</td>
-                    <td class="p-3 text-center text-gray-400">${s.durationMinutes} min</td>
-                    <td class="p-3 text-right font-bold text-emerald-400">R$ ${s.price.toFixed(2)}</td>
-                    <td class="p-3 text-right text-purple-400">${s.commissionPercentage}%</td>
-                </tr>
-            `).join('');
-
-            // Produtos
-            document.getElementById('lista-produtos-tabela').innerHTML = store.produtos.map(p => `
-                <tr>
-                    <td class="p-3 font-medium text-white">${p.name} <span class="text-[10px] text-gray-400">(${p.category})</span></td>
-                    <td class="p-3 text-center font-bold ${p.stock < 10 ? 'text-rose-400' : 'text-gray-200'}">${p.stock} un</td>
-                    <td class="p-3 text-right text-gray-400">R$ ${p.cost.toFixed(2)}</td>
-                    <td class="p-3 text-right font-bold text-emerald-400">R$ ${p.price.toFixed(2)}</td>
-                </tr>
-            `).join('');
-
-            // Despesas
-            document.getElementById('lista-despesas').innerHTML = store.despesas.map(d => `
-                <tr>
-                    <td class="p-4 font-semibold text-white">${d.category}</td>
-                    <td class="p-4 text-gray-300">${d.description}</td>
-                    <td class="p-4 text-center">${d.isFixed ? '<span class="text-xs px-2 py-1 rounded bg-blue-500/20 text-blue-300">Fixo</span>' : '<span class="text-xs px-2 py-1 rounded bg-amber-500/20 text-amber-300">Variável</span>'}</td>
-                    <td class="p-4 text-right font-bold text-rose-400">R$ ${d.value.toFixed(2)}</td>
-                </tr>
-            `).join('');
-        }
-
-        // --- 4. POPULARS SELECTS E MODAIS ---
-        function openNovoAtendimentoModal() {
-            const selectCliente = document.getElementById('atend-cliente');
-            selectCliente.innerHTML = store.clientes.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
-
-            const selectProf = document.getElementById('atend-prof');
-            selectProf.innerHTML = store.profissionais.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
-
-            const selectServico = document.getElementById('atend-servico');
-            selectServico.innerHTML = store.servicos.map(s => `<option value="${s.id}">${s.name} - R$ ${s.price.toFixed(2)}</option>`).join('');
-
-            document.getElementById('modal-atendimento').classList.remove('hidden');
-            document.getElementById('modal-atendimento').classList.add('flex');
-        }
-
-        function closeModal(modalId) {
-            document.getElementById(modalId).classList.add('hidden');
-            document.getElementById(modalId).classList.remove('flex');
-        }
-
-        function salvarAtendimento(event) {
-            event.preventDefault();
-            const cliente = document.getElementById('atend-cliente').value;
-            const prof = document.getElementById('atend-prof').value;
-            const servicoId = parseInt(document.getElementById('atend-servico').value);
-            const pagto = document.getElementById('atend-pagamento').value;
-
-            const servicoObj = store.servicos.find(s => s.id === servicoId);
-            const total = servicoObj ? servicoObj.price : 40.0;
-            const comissao = total * 0.45;
-
-            const novo = {
-                id: Date.now(),
-                clientName: cliente,
-                professionalName: prof,
-                totalValue: total,
-                commissionValue: comissao,
-                paymentMethod: pagto,
-                date: new Date().toISOString().replace('T', ' ').substring(0, 16)
+            const titles = {
+                dashboard: ['Dashboard Geral', 'Visão consolidada da operação e faturamento da barbearia'],
+                appointments: ['Gestão de Atendimentos', 'Controle da agenda e histórico de agendamentos'],
+                clients: ['Clientes & Clubes de Assinatura', 'Gestão de cadastros e receita recorrente mensal'],
+                services: ['Catálogo de Serviços', 'Tabela de preços e durações'],
+                products: ['Estoque de Produtos', 'Controle de insumos e vendas de balcão'],
+                barbers: ['Equipe de Barbeiros', 'Profissionais, metas e comissões'],
+                finance: ['Fluxo Financeiro', 'Faturamento x Despesas e Lucro Líquido'],
+                settings: ['Configurações do Sistema', 'Ajuste de metas e backups em JSON']
             };
 
-            store.atendimentos.unshift(novo);
-            saveStore();
-            renderAll();
-            closeModal('modal-atendimento');
+            if (titles[tabId]) {
+                document.getElementById('current-title').innerText = titles[tabId][0];
+                document.getElementById('current-subtitle').innerText = titles[tabId][1];
+            }
+
+            refreshCurrentTab();
         }
 
-        function deletarAtendimento(id) {
-            store.atendimentos = store.atendimentos.filter(a => a.id !== id);
-            saveStore();
-            renderAll();
+        function refreshCurrentTab() {
+            populateModalDropdowns();
+            renderDashboard();
+            renderAppointments();
+            renderClients();
+            renderServices();
+            renderProducts();
+            renderBarbers();
+            renderFinance();
         }
 
-        function salvarConfigSupabase() {
-            const url = document.getElementById('supabase-url-input').value.trim();
-            const key = document.getElementById('supabase-key-input').value.trim();
+        function formatMoney(val) {
+            return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0);
+        }
 
-            if (url && key) {
-                localStorage.setItem('SUPABASE_URL', url);
-                localStorage.setItem('SUPABASE_KEY', key);
-                initSupabase();
-                alert('Credenciais do Supabase salvas com sucesso!');
+        // --- RENDERERS ---
+        function renderDashboard() {
+            const db = getDB();
+            const today = new Date().toISOString().split('T')[0];
+
+            let todayRevenue = 0;
+            let monthRevenue = 0;
+            let todayApptsCount = 0;
+
+            db.appointments.forEach(a => {
+                if (a.status === 'Concluído') {
+                    if (a.date === today) {
+                        todayRevenue += Number(a.totalValue);
+                        todayApptsCount++;
+                    }
+                    monthRevenue += Number(a.totalValue);
+                }
+            });
+
+            let activeClubs = 0;
+            db.clients.forEach(c => {
+                if (c.planActive && c.planName !== 'Nenhum') {
+                    activeClubs++;
+                    monthRevenue += Number(c.planValue || 0);
+                }
+            });
+
+            document.getElementById('kpi-today-revenue').innerText = formatMoney(todayRevenue);
+            document.getElementById('kpi-month-revenue').innerText = formatMoney(monthRevenue);
+            document.getElementById('kpi-active-clubs').innerText = activeClubs;
+            document.getElementById('kpi-today-appts').innerText = todayApptsCount;
+
+            // Goal
+            const target = db.goal?.med || 20000;
+            const pct = Math.min(100, Math.round((monthRevenue / target) * 100));
+            document.getElementById('goal-target-text').innerText = `(Alvo: ${formatMoney(target)})`;
+            document.getElementById('goal-percentage-text').innerText = `${pct}%`;
+            document.getElementById('goal-progress-fill').style.width = `${pct}%`;
+
+            // Today Table
+            const todayAppts = db.appointments.filter(a => a.date === today);
+            const tbody = document.getElementById('today-appointments-table');
+            if (todayAppts.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color: var(--text-muted);">Nenhum agendamento registrado para hoje.</td></tr>`;
+            } else {
+                tbody.innerHTML = todayAppts.map(a => `
+                    <tr>
+                        <td><strong>${a.time}</strong></td>
+                        <td>${a.clientName}</td>
+                        <td>${a.barberName}</td>
+                        <td>${a.serviceName}</td>
+                        <td>${formatMoney(a.totalValue)}</td>
+                        <td><span class="badge ${a.status === 'Concluído' ? 'badge-completed' : (a.status === 'Cancelado' ? 'badge-cancelled' : 'badge-scheduled')}">${a.status}</span></td>
+                        <td>
+                            ${a.status === 'Agendado' ? `
+                                <button class="btn btn-success" style="padding: 4px 8px; font-size: 11px;" onclick="completeAppointment(${a.id})">Concluir</button>
+                                <button class="btn btn-danger" style="padding: 4px 8px; font-size: 11px;" onclick="cancelAppointment(${a.id})">Cancelar</button>
+                            ` : '-'}
+                        </td>
+                    </tr>
+                `).join('');
             }
         }
 
-        // --- 5. GRÁFICOS DO DASHBOARD (CHART.JS) ---
-        let chartEvol, chartDesp, chartProf, chartProd;
+        function renderAppointments() {
+            const db = getDB();
+            const dateFilter = document.getElementById('filter-appt-date').value;
+            const statusFilter = document.getElementById('filter-appt-status').value;
 
-        function renderCharts() {
-            const chartConfig = {
-                plugins: { legend: { labels: { color: '#8B949E' } } },
-                scales: {
-                    x: { ticks: { color: '#8B949E' }, grid: { color: '#21262D' } },
-                    y: { ticks: { color: '#8B949E' }, grid: { color: '#21262D' } }
+            let filtered = db.appointments;
+            if (dateFilter) filtered = filtered.filter(a => a.date === dateFilter);
+            if (statusFilter && statusFilter !== 'ALL') filtered = filtered.filter(a => a.status === statusFilter);
+
+            const tbody = document.getElementById('appointments-table-body');
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color: var(--text-muted);">Nenhum agendamento encontrado.</td></tr>`;
+            } else {
+                tbody.innerHTML = filtered.map(a => `
+                    <tr>
+                        <td>${a.date} às ${a.time}</td>
+                        <td><strong>${a.clientName}</strong></td>
+                        <td>${a.barberName}</td>
+                        <td>${a.serviceName}</td>
+                        <td>${a.paymentMethod}</td>
+                        <td>${formatMoney(a.totalValue)}</td>
+                        <td><span class="badge ${a.status === 'Concluído' ? 'badge-completed' : (a.status === 'Cancelado' ? 'badge-cancelled' : 'badge-scheduled')}">${a.status}</span></td>
+                        <td>
+                            ${a.status === 'Agendado' ? `
+                                <button class="btn btn-success" style="padding: 4px 8px; font-size: 11px;" onclick="completeAppointment(${a.id})">Concluir</button>
+                                <button class="btn btn-danger" style="padding: 4px 8px; font-size: 11px;" onclick="cancelAppointment(${a.id})">Cancelar</button>
+                            ` : ''}
+                            <button class="btn btn-outline" style="padding: 4px 8px; font-size: 11px;" onclick="deleteAppointment(${a.id})">Excluir</button>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+        }
+
+        function renderClients() {
+            const db = getDB();
+            const query = (document.getElementById('search-client').value || '').toLowerCase();
+
+            const filtered = db.clients.filter(c => c.name.toLowerCase().includes(query) || (c.phone && c.phone.includes(query)));
+
+            let activeClubsCount = 0;
+            let mrr = 0;
+            db.clients.forEach(c => {
+                if (c.planActive && c.planName !== 'Nenhum') {
+                    activeClubsCount++;
+                    mrr += Number(c.planValue || 0);
+                }
+            });
+
+            document.getElementById('kpi-total-clients').innerText = db.clients.length;
+            document.getElementById('kpi-clubs-count').innerText = activeClubsCount;
+            document.getElementById('kpi-mrr-value').innerText = formatMoney(mrr);
+
+            const tbody = document.getElementById('clients-table-body');
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color: var(--text-muted);">Nenhum cliente cadastrado.</td></tr>`;
+            } else {
+                tbody.innerHTML = filtered.map(c => `
+                    <tr>
+                        <td><strong>${c.name}</strong></td>
+                        <td>${c.phone || '-'}</td>
+                        <td>${c.planActive && c.planName !== 'Nenhum' ? `<span class="badge badge-gold">${c.planName}</span>` : '<span class="badge badge-scheduled">Sem Clube</span>'}</td>
+                        <td>${c.planActive ? formatMoney(c.planValue) : '-'}</td>
+                        <td>${c.totalServices || 0} cortes</td>
+                        <td>
+                            <button class="btn btn-danger" style="padding: 4px 8px; font-size: 11px;" onclick="deleteClient(${c.id})">Excluir</button>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+        }
+
+        function renderServices() {
+            const db = getDB();
+            const tbody = document.getElementById('services-table-body');
+            tbody.innerHTML = db.services.map(s => `
+                <tr>
+                    <td><strong>${s.name}</strong></td>
+                    <td>${s.duration} min</td>
+                    <td>${formatMoney(s.price)}</td>
+                    <td>
+                        <button class="btn btn-danger" style="padding: 4px 8px; font-size: 11px;" onclick="deleteService(${s.id})">Excluir</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function renderProducts() {
+            const db = getDB();
+            const tbody = document.getElementById('products-table-body');
+            tbody.innerHTML = db.products.map(p => `
+                <tr>
+                    <td><strong>${p.name}</strong></td>
+                    <td><span class="badge ${p.stock < 5 ? 'badge-cancelled' : 'badge-completed'}">${p.stock} un</span></td>
+                    <td>${formatMoney(p.cost)}</td>
+                    <td>${formatMoney(p.price)}</td>
+                    <td style="color: var(--bright-teal); font-weight: 600;">+ ${formatMoney(p.price - p.cost)}</td>
+                    <td>
+                        <button class="btn btn-danger" style="padding: 4px 8px; font-size: 11px;" onclick="deleteProduct(${p.id})">Excluir</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function renderBarbers() {
+            const db = getDB();
+            const tbody = document.getElementById('barbers-table-body');
+            tbody.innerHTML = db.barbers.map(b => `
+                <tr>
+                    <td><strong>${b.name}</strong></td>
+                    <td>${b.phone || '-'}</td>
+                    <td>${b.commission}% comissão</td>
+                    <td><span class="badge badge-completed">Ativo</span></td>
+                    <td>
+                        <button class="btn btn-danger" style="padding: 4px 8px; font-size: 11px;" onclick="deleteBarber(${b.id})">Excluir</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function renderFinance() {
+            const db = getDB();
+
+            let totalRev = 0;
+            db.appointments.forEach(a => {
+                if (a.status === 'Concluído') totalRev += Number(a.totalValue);
+            });
+            db.clients.forEach(c => {
+                if (c.planActive) totalRev += Number(c.planValue || 0);
+            });
+
+            let totalExp = 0;
+            db.expenses.forEach(e => {
+                totalExp += Number(e.amount);
+            });
+
+            document.getElementById('fin-total-rev').innerText = formatMoney(totalRev);
+            document.getElementById('fin-total-exp').innerText = formatMoney(totalExp);
+            document.getElementById('fin-net-profit').innerText = formatMoney(totalRev - totalExp);
+
+            const tbody = document.getElementById('expenses-table-body');
+            tbody.innerHTML = db.expenses.map(e => `
+                <tr>
+                    <td>${e.date}</td>
+                    <td><strong>${e.description}</strong></td>
+                    <td><span class="badge badge-scheduled">${e.category}</span></td>
+                    <td style="color: var(--danger-red); font-weight: 600;">- ${formatMoney(e.amount)}</td>
+                    <td>
+                        <button class="btn btn-danger" style="padding: 4px 8px; font-size: 11px;" onclick="deleteExpense(${e.id})">Excluir</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Dropdowns in Modals
+        function populateModalDropdowns() {
+            const db = getDB();
+
+            const clientSelect = document.getElementById('appt-client-id');
+            clientSelect.innerHTML = db.clients.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+
+            const barberSelect = document.getElementById('appt-barber-id');
+            barberSelect.innerHTML = db.barbers.map(b => `<option value="${b.id}">${b.name}</option>`).join('');
+
+            const serviceSelect = document.getElementById('appt-service-id');
+            serviceSelect.innerHTML = db.services.map(s => `<option value="${s.id}">${s.name} (${formatMoney(s.price)})</option>`).join('');
+
+            document.getElementById('appt-date').value = new Date().toISOString().split('T')[0];
+        }
+
+        function updatePlanValueField() {
+            const val = document.getElementById('cli-plan').value.split('|')[1];
+            document.getElementById('cli-plan-val').value = val || 0;
+        }
+
+        // --- ACTIONS & CRUD ---
+        function openModal(id) {
+            document.getElementById(id).classList.add('active');
+            if (id === 'modal-supabase-config') {
+                document.getElementById('supa-url-input').value = localStorage.getItem('supa_url') || '';
+                document.getElementById('supa-key-input').value = localStorage.getItem('supa_key') || '';
+            }
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+        }
+
+        function saveAppointment(e) {
+            e.preventDefault();
+            const db = getDB();
+            const clientId = Number(document.getElementById('appt-client-id').value);
+            const barberId = Number(document.getElementById('appt-barber-id').value);
+            const serviceId = Number(document.getElementById('appt-service-id').value);
+            const date = document.getElementById('appt-date').value;
+            const time = document.getElementById('appt-time').value;
+            const payment = document.getElementById('appt-payment').value;
+
+            const client = db.clients.find(c => c.id === clientId);
+            const barber = db.barbers.find(b => b.id === barberId);
+            const service = db.services.find(s => s.id === serviceId);
+
+            const newAppt = {
+                id: Date.now(),
+                clientId, clientName: client ? client.name : "Cliente",
+                barberId, barberName: barber ? barber.name : "Barbeiro",
+                serviceId, serviceName: service ? service.name : "Serviço",
+                date, time, paymentMethod: payment,
+                totalValue: service ? Number(service.price) : 0,
+                status: 'Agendado'
+            };
+
+            db.appointments.unshift(newAppt);
+            saveDB(db);
+            syncRecordToSupabase('appointments', newAppt);
+            closeModal('modal-appointment');
+        }
+
+        function completeAppointment(id) {
+            const db = getDB();
+            const appt = db.appointments.find(a => a.id === id);
+            if (appt) {
+                appt.status = 'Concluído';
+                saveDB(db);
+                syncRecordToSupabase('appointments', appt);
+            }
+        }
+
+        function cancelAppointment(id) {
+            const db = getDB();
+            const appt = db.appointments.find(a => a.id === id);
+            if (appt) {
+                appt.status = 'Cancelado';
+                saveDB(db);
+                syncRecordToSupabase('appointments', appt);
+            }
+        }
+
+        function deleteAppointment(id) {
+            if (!confirm("Remover este agendamento?")) return;
+            const db = getDB();
+            db.appointments = db.appointments.filter(a => a.id !== id);
+            saveDB(db);
+            deleteRecordFromSupabase('appointments', id);
+        }
+
+        function saveClient(e) {
+            e.preventDefault();
+            const db = getDB();
+            const name = document.getElementById('cli-name').value.trim();
+            const phone = document.getElementById('cli-phone').value.trim();
+            const planParts = document.getElementById('cli-plan').value.split('|');
+            const planName = planParts[0];
+            const planValue = Number(document.getElementById('cli-plan-val').value || 0);
+
+            const newClient = {
+                id: Date.now(),
+                name, phone,
+                planName, planValue,
+                planActive: planName !== 'Nenhum',
+                totalServices: 0
+            };
+
+            db.clients.unshift(newClient);
+            saveDB(db);
+            syncRecordToSupabase('clients', newClient);
+            closeModal('modal-client');
+        }
+
+        function deleteClient(id) {
+            if (!confirm("Excluir cliente?")) return;
+            const db = getDB();
+            db.clients = db.clients.filter(c => c.id !== id);
+            saveDB(db);
+            deleteRecordFromSupabase('clients', id);
+        }
+
+        function saveService(e) {
+            e.preventDefault();
+            const db = getDB();
+            const name = document.getElementById('srv-name').value.trim();
+            const price = Number(document.getElementById('srv-price').value);
+            const duration = Number(document.getElementById('srv-duration').value);
+
+            const newService = { id: Date.now(), name, price, duration };
+            db.services.push(newService);
+            saveDB(db);
+            syncRecordToSupabase('services', newService);
+            closeModal('modal-service');
+        }
+
+        function deleteService(id) {
+            if (!confirm("Excluir serviço?")) return;
+            const db = getDB();
+            db.services = db.services.filter(s => s.id !== id);
+            saveDB(db);
+            deleteRecordFromSupabase('services', id);
+        }
+
+        function saveProduct(e) {
+            e.preventDefault();
+            const db = getDB();
+            const name = document.getElementById('prd-name').value.trim();
+            const stock = Number(document.getElementById('prd-stock').value);
+            const cost = Number(document.getElementById('prd-cost').value);
+            const price = Number(document.getElementById('prd-price').value);
+
+            const newProd = { id: Date.now(), name, stock, cost, price };
+            db.products.push(newProd);
+            saveDB(db);
+            syncRecordToSupabase('products', newProd);
+            closeModal('modal-product');
+        }
+
+        function deleteProduct(id) {
+            if (!confirm("Excluir produto?")) return;
+            const db = getDB();
+            db.products = db.products.filter(p => p.id !== id);
+            saveDB(db);
+            deleteRecordFromSupabase('products', id);
+        }
+
+        function saveBarber(e) {
+            e.preventDefault();
+            const db = getDB();
+            const name = document.getElementById('bar-name').value.trim();
+            const phone = document.getElementById('bar-phone').value.trim();
+            const commission = Number(document.getElementById('bar-comm').value);
+
+            const newBarber = { id: Date.now(), name, phone, commission, isActive: true };
+            db.barbers.push(newBarber);
+            saveDB(db);
+            syncRecordToSupabase('barbers', newBarber);
+            closeModal('modal-barber');
+        }
+
+        function deleteBarber(id) {
+            if (!confirm("Excluir barbeiro?")) return;
+            const db = getDB();
+            db.barbers = db.barbers.filter(b => b.id !== id);
+            saveDB(db);
+            deleteRecordFromSupabase('barbers', id);
+        }
+
+        function saveExpense(e) {
+            e.preventDefault();
+            const db = getDB();
+            const description = document.getElementById('exp-desc').value.trim();
+            const category = document.getElementById('exp-cat').value;
+            const amount = Number(document.getElementById('exp-amount').value);
+
+            const newExp = {
+                id: Date.now(),
+                description, category, amount,
+                date: new Date().toISOString().split('T')[0]
+            };
+
+            db.expenses.unshift(newExp);
+            saveDB(db);
+            syncRecordToSupabase('expenses', newExp);
+            closeModal('modal-expense');
+        }
+
+        function deleteExpense(id) {
+            if (!confirm("Excluir despesa?")) return;
+            const db = getDB();
+            db.expenses = db.expenses.filter(e => e.id !== id);
+            saveDB(db);
+            deleteRecordFromSupabase('expenses', id);
+        }
+
+        function saveGoalSettings() {
+            const db = getDB();
+            db.goal = {
+                min: Number(document.getElementById('setting-goal-min').value),
+                med: Number(document.getElementById('setting-goal-med').value),
+                high: Number(document.getElementById('setting-goal-high').value)
+            };
+            saveDB(db);
+            alert("Metas salvas com sucesso!");
+        }
+
+        function exportDataJSON() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(getDB(), null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `barbearia_braganca_backup_${new Date().toISOString().split('T')[0]}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        function importDataJSON(event) {
+            const fileReader = new FileReader();
+            fileReader.onload = function(e) {
+                try {
+                    const importedDB = JSON.parse(e.target.result);
+                    saveDB(importedDB);
+                    alert("Dados importados com sucesso!");
+                } catch (err) {
+                    alert("Erro ao importar o arquivo JSON. Certifique-se de que é um backup válido.");
                 }
             };
-
-            // Chart Evolução
-            if (chartEvol) chartEvol.destroy();
-            chartEvol = new Chart(document.getElementById('chartEvolucao'), {
-                type: 'line',
-                data: {
-                    labels: ['Semana 1', 'Semana 2', 'Semana 3', 'Semana 4'],
-                    datasets: [{
-                        label: 'Faturamento (R$)',
-                        data: [2150.0, 2800.0, 3100.0, 2700.16],
-                        borderColor: '#D4AF37',
-                        backgroundColor: 'rgba(212, 175, 55, 0.1)',
-                        fill: true,
-                        tension: 0.3
-                    }]
-                },
-                options: chartConfig
-            });
-
-            // Chart Despesas
-            if (chartDesp) chartDesp.destroy();
-            chartDesp = new Chart(document.getElementById('chartDespesas'), {
-                type: 'doughnut',
-                data: {
-                    labels: store.despesas.map(d => d.category),
-                    datasets: [{
-                        data: store.despesas.map(d => d.value),
-                        backgroundColor: ['#F43F5E', '#3B82F6', '#8B5CF6', '#10B981']
-                    }]
-                },
-                options: { plugins: { legend: { labels: { color: '#8B949E' } } } }
-            });
-
-            // Chart Profissionais
-            if (chartProf) chartProf.destroy();
-            chartProf = new Chart(document.getElementById('chartProfissionais'), {
-                type: 'bar',
-                data: {
-                    labels: ['Gabriel Bragança', 'Luccas'],
-                    datasets: [{
-                        label: 'Faturamento Gerado (R$)',
-                        data: [6200.0, 4550.16],
-                        backgroundColor: ['#D4AF37', '#3B82F6']
-                    }]
-                },
-                options: chartConfig
-            });
-
-            // Chart Produtos
-            if (chartProd) chartProd.destroy();
-            chartProd = new Chart(document.getElementById('chartProdutos'), {
-                type: 'bar',
-                data: {
-                    labels: ['Bebidas', 'Cabelo/Barba', 'Perfumes'],
-                    datasets: [{
-                        label: 'Vendas (R$)',
-                        data: [720.0, 1150.0, 850.0],
-                        backgroundColor: '#10B981'
-                    }]
-                },
-                options: chartConfig
-            });
+            fileReader.readAsText(event.target.files[0]);
         }
 
-        // Iniciar App
+        function resetToSeedData() {
+            if (confirm("ATENÇÃO: Deseja restaurar os dados para o estado inicial de exemplo? Todos os dados não sincronizados serão perdidos.")) {
+                localStorage.removeItem('barbearia_braganca_db');
+                refreshCurrentTab();
+            }
+        }
+
+        // Initialize App & Supabase Connection on Load
         window.addEventListener('DOMContentLoaded', () => {
             initSupabase();
-            renderAll();
-            renderCharts();
+            refreshCurrentTab();
         });
     </script>
 </body>
